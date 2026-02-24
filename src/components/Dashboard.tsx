@@ -1,93 +1,91 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
 import { socket } from '../services/socket';
-import { LayoutDashboard, Clock, User, Briefcase } from 'lucide-react';
+import { Clock, Tag, User } from 'lucide-react';
+import axios from 'axios';
 
-interface Request {
+interface Project {
   _id: string;
-  nom: string;
-  projet: string;
+  name: string;
+  description: string;
   type: string;
-  produit: string;
+  product: string;
   deadline: string;
 }
 
-const Dashboard = () => {
-  const [requests, setRequests] = useState<Request[]>([]);
+const Dashboard: React.FC = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    // Fetch initial data
-    const fetchRequests = async () => {
+    // Initial load
+    const fetchProjects = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/requests');
-        setRequests(response.data);
+        const response = await axios.get('http://localhost:5000/api/projects');
+        setProjects(response.data);
       } catch (error) {
-        console.error('Error fetching requests:', error);
+        console.error('Error fetching projects:', error);
       }
     };
 
-    fetchRequests();
+    fetchProjects();
 
     // Listen for real-time updates
-    socket.on('newRequest', (newRequest: Request) => {
-      setRequests((prev) => {
-        const updated = [...prev, newRequest];
+    socket.on('project_added', (newProject: Project) => {
+      setProjects((prev) => {
+        const updated = [...prev, newProject];
         return updated.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
       });
     });
 
     return () => {
-      socket.off('newRequest');
+      socket.off('project_added');
     };
   }, []);
 
   return (
-    <div className="flex-1 p-8 bg-gray-50 min-h-screen">
-      <div className="flex items-center gap-3 mb-8">
-        <LayoutDashboard className="w-8 h-8 text-indigo-600" />
-        <h1 className="text-3xl font-bold text-gray-900">FlowLive Dashboard</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold text-gray-800">Live Projects Dashboard</h2>
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+          </span>
+          <span className="text-sm font-medium text-gray-500">Live Now</span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {requests.map((req) => (
-          <div key={req._id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {projects.map((project) => (
+          <div
+            key={project._id}
+            className="bg-white p-6 rounded-2xl shadow-md border-l-4 border-blue-500 hover:shadow-lg transition-shadow"
+          >
             <div className="flex justify-between items-start mb-4">
-              <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-full uppercase">
-                {req.type}
+              <h3 className="text-xl font-bold text-gray-800">{project.product}</h3>
+              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold uppercase tracking-wider">
+                {project.type}
               </span>
-              <div className="flex items-center text-gray-500 text-sm italic">
-                <Clock className="w-4 h-4 mr-1" />
-                {new Date(req.deadline).toLocaleDateString()}
-              </div>
             </div>
-            
-            <h3 className="text-xl font-bold text-gray-800 mb-2">{req.projet}</h3>
-            
-            <div className="space-y-2 mt-4">
-              <div className="flex items-center text-gray-600">
-                <User className="w-4 h-4 mr-2" />
-                <span className="text-sm font-medium">{req.nom}</span>
+            <p className="text-gray-600 mb-6 line-clamp-2">{project.description}</p>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center gap-2 text-gray-500">
+                <User size={16} />
+                <span>{project.name}</span>
               </div>
-              <div className="flex items-center text-gray-600">
-                <Briefcase className="w-4 h-4 mr-2" />
-                <span className="text-sm">{req.produit}</span>
+              <div className="flex items-center gap-2 text-red-500 font-medium">
+                <Clock size={16} />
+                <span>{new Date(project.deadline).toLocaleDateString()}</span>
               </div>
-            </div>
-            
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
-              <span className="text-xs text-gray-400">ID: {req._id.slice(-6)}</span>
-              <button className="text-indigo-600 hover:text-indigo-800 text-sm font-semibold">
-                Dtails
-              </button>
             </div>
           </div>
         ))}
-        {requests.length === 0 && (
-          <div className="col-span-full py-20 text-center text-gray-500">
-            Aucune requte en attente.
-          </div>
-        )}
       </div>
+      
+      {projects.length === 0 && (
+        <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+          <p className="text-gray-400">No projects yet. Start pushing data from the left!</p>
+        </div>
+      )}
     </div>
   );
 };
