@@ -29,9 +29,11 @@ mongoose.connect(process.env.MONGODB_URI, mongoOptions)
 // Project Schema
 const projectSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  initiatorName: { type: String, required: true }, // Added field
   description: { type: String, required: true },
-  type: { type: String, required: true },
-  product: { type: String, required: true },
+  type: { type: String, required: true, enum: ['Marketing', 'Développement', 'Design', 'Interne'] }, // Added enum
+  product: { type: String, required: true }, // Added field
+  status: { type: String, default: 'Nouveau', enum: ['Nouveau', 'En cours', 'En révision', 'Terminé'] }, // Added status
   deadline: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now }
 });
@@ -56,6 +58,10 @@ io.on('connection', (socket) => {
     try {
       const newProject = new Project(data);
       await newProject.save();
+
+      // Notification Logic (Stubs)
+      console.log(`[Notification] To Team (Slack/Teams): Nouveau projet "${newProject.name}" soumis par ${newProject.initiatorName}.`);
+      console.log(`[Notification] To Initiator (Email): Merci ${newProject.initiatorName}, votre demande pour "${newProject.product}" est reçue. Suivi: /track/${newProject._id}`);
       
       // Broadcast the new project to all connected clients
       io.emit('project_added', newProject);
