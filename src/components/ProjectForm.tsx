@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { socket } from '../services/socket';
 import { Send } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const ProjectForm: React.FC = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    initiatorName: '',
     name: '',
     description: '',
     type: 'Marketing',
@@ -16,17 +17,20 @@ const ProjectForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.initiatorName && formData.name && formData.description && formData.deadline) {
-      socket.emit('new_project', formData);
+    if (user && formData.name && formData.description && formData.deadline) {
+      const submissionData = {
+        ...formData,
+        initiatorName: user.name, // Auto-populate from auth
+      };
+      socket.emit('new_project', submissionData);
       setFormData({
-        initiatorName: '',
         name: '',
         description: '',
         type: 'Marketing',
         product: 'Catalog Item A',
         deadline: ''
       });
-      alert('Project submitted successfully! Notifications sent.');
+      alert('Project submitted successfully!');
     }
   };
 
@@ -34,17 +38,6 @@ const ProjectForm: React.FC = () => {
     <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">New Project Request</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Initiator Name*</label>
-          <input
-            type="text"
-            className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            placeholder="Your name"
-            value={formData.initiatorName}
-            onChange={(e) => setFormData({ ...formData, initiatorName: e.target.value })}
-            required
-          />
-        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Project Name*</label>
           <input

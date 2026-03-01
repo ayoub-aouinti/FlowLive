@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { socket } from '../services/socket';
 import { LayoutGrid, List, AlertCircle, CheckCircle2, Timer } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 interface Project {
   _id: string;
@@ -79,11 +80,14 @@ const KanbanColumn = ({ title, type, projects }: { title: string, type: string, 
 const Dashboard: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [view, setView] = useState<'table' | 'kanban'>('kanban');
+  const { token } = useAuth();
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/projects');
+        const response = await axios.get('http://localhost:5000/api/projects', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setProjects(response.data);
       } catch (error) {
         console.error('Error fetching projects:', error);
