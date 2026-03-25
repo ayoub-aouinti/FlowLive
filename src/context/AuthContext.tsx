@@ -25,11 +25,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if token still valid? For now just confirm loading is done.
-    setLoading(false);
+    // Check if token still valid? For now just confirm initial load is done.
   }, []);
 
   const login = (newToken: string, newUser: User) => {
+    console.log('🔐 Logging in user:', newUser.name);
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);
@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    console.log('🔓 Logging out');
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');

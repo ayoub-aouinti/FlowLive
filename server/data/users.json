@@ -1,0 +1,5 @@
+[
+  {"name": "Super Admin", "email": "super@flow.com", "password": "password123", "role": "superadmin"},
+  {"name": "Admin User", "email": "admin@flow.com", "password": "password123", "role": "admin"},
+  {"name": "Standard User", "email": "user@flow.com", "password": "password123", "role": "user"}
+]

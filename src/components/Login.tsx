@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { LogIn } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,22 +12,30 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const response = await axios.post('http://localhost:5001/api/auth/login', { email, password });
       login(response.data.token, response.data.user);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Login failed');
+      } else {
+        setError('An unexpected error occurred');
+      }
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-        <div className="flex flex-col items-center mb-8">
-          <div className="bg-blue-600 p-3 rounded-xl text-white mb-4">
-            <LogIn size={32} />
+        <div className="flex flex-col items-center mb-8 px-2 text-center">
+          <div className="mb-6 p-2 bg-white rounded-2xl shadow-sm border border-[#ececeb] animate-in zoom-in slide-in-from-top-4 duration-700">
+            <img src={logo} alt="FlowLive" className="w-20 h-20 object-contain" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">FlowLive Login</h2>
-          <p className="text-gray-500 mt-2 text-center text-sm">Entrez vos identifiants pour accéder au dashboard "Live"</p>
+          <h2 className="text-4xl font-extrabold text-[#1a4f8b] tracking-tight">
+            Flow<span className="text-[#8cc63f]">Live</span> Login
+          </h2>
+          <p className="text-[#9b9a97] mt-3 font-medium text-sm leading-relaxed max-w-xs">
+            Entrez vos identifiants pour accéder au dashboard "Live"
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -56,7 +64,7 @@ const Login: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-blue-200"
+            className="w-full bg-[#1a4f8b] hover:bg-[#154070] text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-[#1a4f8b]/20 active:scale-[0.98]"
           >
             Se connecter
           </button>

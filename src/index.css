@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  background-color: #f8fafc;
+  --notion-bg: #ffffff;
+  --notion-sidebar: #fbfbfa;
+  --notion-border: #ececeb;
+  --notion-text: #37352f;
+  --notion-text-light: #9b9a97;
+  --notion-hover: #efefed;
+  --brand-blue: #1a4f8b;
+  --brand-green: #8cc63f;
 }
 
 body {
@@ -11,6 +18,9 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
+  color: var(--notion-text);
+  background-color: var(--notion-bg);
+  -webkit-font-smoothing: antialiased;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -19,4 +29,9 @@ body {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Notion-like components */
+.notion-pill {
+  @apply px-2 py-0.5 rounded text-[11px] font-medium transition-colors;
 }
