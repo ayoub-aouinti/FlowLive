@@ -1,0 +1,79 @@
+[
+  {
+    "id": "dept_1",
+    "name": "Département IT",
+    "adminId": "admin@flow.com",
+    "products": [
+      "Software",
+      "Hardware",
+      "Network",
+      "test"
+    ],
+    "types": [
+      "Développement",
+      "Maintenance",
+      "Support"
+    ],
+    "pageConfigs": {},
+    "formFields": [
+      {
+        "id": "f_initiator",
+        "label": "Initiateur",
+        "type": "text",
+        "required": true
+      },
+      {
+        "id": "f_assignedTo",
+        "label": "Affectation",
+        "type": "user",
+        "required": true
+      },
+      {
+        "id": "f_product",
+        "label": "Produit",
+        "type": "product",
+        "required": true
+      },
+      {
+        "id": "f_type",
+        "label": "Type de projet",
+        "type": "projectType",
+        "required": true
+      },
+      {
+        "id": "f_deadline",
+        "label": "Deadline",
+        "type": "date",
+        "required": true
+      },
+      {
+        "id": "f_priority",
+        "label": "Priorité",
+        "type": "select",
+        "required": false
+      },
+      {
+        "id": "f_urgent",
+        "label": "Urgent",
+        "type": "checkbox",
+        "required": true
+      }
+    ]
+  },
+  {
+    "name": "department medis digital",
+    "adminId": "admin@flow.com",
+    "activePages": [
+      "table",
+      "kanban",
+      "timeline",
+      "calendrier",
+      "reporting",
+      "urgences",
+      "stats"
+    ],
+    "id": "dept_1774568358786",
+    "products": [],
+    "types": []
+  }
+]

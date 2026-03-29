@@ -12,23 +12,69 @@ import {
   BarChart2,
   AlertCircle,
   PlusCircle,
-  PieChart
+  PieChart,
+  Building2
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/useNavigation';
-import type { ViewType } from '../types';
+import type { ViewType, Department, FormField } from '../types';
 import SearchModal from './SearchModal';
 import InboxPanel from './InboxPanel';
 import SettingsModal from './SettingsModal';
-import type { Project } from '../types';
+import type { Project, Notification } from '../types';
+import { socket } from '../services/socket';
 import logo from '../assets/logo.png';
 
 const Sidebar: React.FC = () => {
   const { user, logout, token } = useAuth();
-  const { view, setView } = useNavigation();
+  const { view, setView, selectedDepartmentId, setSelectedDepartmentId } = useNavigation();
   const [activeModal, setActiveModal] = useState<'search' | 'inbox' | 'settings' | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [deptConfig, setDeptConfig] = useState<{
+    departmentId: string;
+    departmentName: string;
+    products: string[];
+    types: string[];
+    activePages: string[];
+    pageConfigs: Record<string, unknown>;
+    formFields: FormField[] | null;
+  } | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    if (token) {
+      axios.get('http://localhost:5001/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => setNotifications(res.data))
+        .catch(err => console.error(err));
+    }
+  }, [token]);
+
+  useEffect(() => {
+    socket.on('notification_added', (notif: Notification) => {
+      if (notif.userId === user?._id) {
+         setNotifications(prev => [notif, ...prev]);
+      }
+    });
+    return () => { socket.off('notification_added'); };
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (token && user?.role === 'superadmin') {
+      axios.get('http://localhost:5001/api/departments', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => setDepartments(res.data))
+        .catch(err => console.error(err));
+    }
+  }, [token, user?.role]);
+
+  useEffect(() => {
+    if (token && user?.role !== 'superadmin' && user?.role !== 'guest') {
+      axios.get('http://localhost:5001/api/departments/my-config', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => setDeptConfig(res.data))
+        .catch(err => console.error(err));
+    }
+  }, [token, user?.role]);
 
   useEffect(() => {
     if (token) {
@@ -81,7 +127,11 @@ const Sidebar: React.FC = () => {
             <Inbox size={16} className="text-[#9b9a97] group-hover:text-[#37352f]" />
             <span className="text-sm">Boîte de réception</span>
             <div className="flex-1" />
-            <span className="bg-[#eb5757] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">1</span>
+            {notifications.filter(n => !n.read).length > 0 && (
+              <span className="bg-[#eb5757] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                {notifications.filter(n => !n.read).length}
+              </span>
+            )}
           </div>
           <div 
             onClick={() => setActiveModal('settings')}
@@ -90,31 +140,73 @@ const Sidebar: React.FC = () => {
             <Settings size={16} className="text-[#9b9a97] group-hover:text-[#37352f]" />
             <span className="text-sm">Paramètres</span>
           </div>
+          
+          {user?.role === 'superadmin' && (
+            <div 
+              onClick={() => setView('cockpit')}
+              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-[#efefed] rounded-md cursor-pointer transition-colors group ${view === 'cockpit' ? 'bg-[#efefed] text-[#1a4f8b] font-bold shadow-sm' : 'text-[#37352f]'}`}
+            >
+              <Building2 size={16} className={view === 'cockpit' ? 'text-[#1a4f8b]' : 'text-[#9b9a97] group-hover:text-[#37352f]'} />
+              <span className="text-sm">Cockpit Super Admin</span>
+            </div>
+          )}
+
+          {user?.role === 'admin' && (
+            <div 
+              onClick={() => setView('dept_cockpit')}
+              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-[#efefed] rounded-md cursor-pointer transition-colors group ${view === 'dept_cockpit' ? 'bg-[#efefed] text-[#1a4f8b] font-bold shadow-sm' : 'text-[#37352f]'}`}
+            >
+              <Building2 size={16} className={view === 'dept_cockpit' ? 'text-[#1a4f8b]' : 'text-[#9b9a97] group-hover:text-[#37352f]'} />
+              <span className="text-sm">Cockpit Département</span>
+            </div>
+          )}
 
           <div className="pt-6 pb-2 px-2">
-            <span className="text-[11px] font-bold text-[#91918e] uppercase tracking-wider">Pages partagées</span>
+            <span className="text-[11px] font-bold text-[#91918e] uppercase tracking-wider">
+              {user?.role === 'superadmin' ? 'Systèmes Départements' : (deptConfig?.departmentName || 'Mon Département')}
+            </span>
           </div>
 
           <div className="space-y-0.5">
-            <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#efefed] rounded-md cursor-default text-[#37352f] transition-colors group font-medium">
-              <LayoutGrid size={16} className="text-[#9b9a97]" />
-              <span className="text-sm truncate">Planning Département Di...</span>
-            </div>
-            
-            <div className="pl-4 space-y-0.5">
-              {mainPages.map((item) => (
+            {user?.role === 'superadmin' ? (
+              // Super Admin view: List of all departments
+              departments.map((dept) => (
                 <button
-                  key={item.id}
-                  onClick={() => setView(item.id)}
+                  key={dept.id}
+                  onClick={() => {
+                    setSelectedDepartmentId(dept.id);
+                    setView('table');
+                  }}
                   className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#efefed] rounded-md cursor-pointer transition-colors group ${
-                    view === item.id ? 'bg-[#efefed] text-[#1a4f8b] font-bold shadow-sm' : 'text-[#5a5a57]'
+                    selectedDepartmentId === dept.id && view !== 'cockpit' ? 'bg-[#efefed] text-[#1a4f8b] font-bold shadow-sm' : 'text-[#37352f]'
                   }`}
                 >
-                  <item.icon size={14} className={view === item.id ? 'text-[#1a4f8b]' : 'text-[#9b9a97] group-hover:text-[#37352f]'} />
-                  <span className="text-sm text-left truncate">{item.label}</span>
+                  <LayoutGrid size={16} className={selectedDepartmentId === dept.id && view !== 'cockpit' ? 'text-[#1a4f8b]' : 'text-[#9b9a97]'} />
+                  <span className="text-sm truncate">{dept.name}</span>
                 </button>
-              ))}
-            </div>
+              ))
+            ) : (
+              // Admin/Other roles view: List of active pages for their department
+              <div className="space-y-0.5">
+                <div className="pl-2 space-y-0.5">
+                  {mainPages.filter(item => {
+                    if (!deptConfig || !deptConfig.activePages) return true;
+                    return deptConfig.activePages.includes(item.id);
+                  }).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setView(item.id)}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#efefed] rounded-md cursor-pointer transition-colors group ${
+                        view === item.id ? 'bg-[#efefed] text-[#1a4f8b] font-bold shadow-sm' : 'text-[#5a5a57]'
+                      }`}
+                    >
+                      <item.icon size={14} className={view === item.id ? 'text-[#1a4f8b]' : 'text-[#9b9a97] group-hover:text-[#37352f]'} />
+                      <span className="text-sm text-left truncate">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </nav>
 
@@ -145,7 +237,13 @@ const Sidebar: React.FC = () => {
 
       {/* Modals */}
       {activeModal === 'search' && <SearchModal projects={projects} onClose={() => setActiveModal(null)} />}
-      {activeModal === 'inbox' && <InboxPanel onClose={() => setActiveModal(null)} />}
+      {activeModal === 'inbox' && <InboxPanel onClose={() => setActiveModal(null)} onNotificationRead={() => {
+         // Refresh notifications when panel closes or a notification is read
+         if (token) {
+           axios.get('http://localhost:5001/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
+             .then(res => setNotifications(res.data));
+         }
+      }} />}
       {activeModal === 'settings' && <SettingsModal onClose={() => setActiveModal(null)} />}
     </>
   );

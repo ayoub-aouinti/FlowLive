@@ -3,6 +3,32 @@ export interface User {
   name: string;
   role?: string;
   email?: string;
+  departmentId?: string | null;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  adminId: string;
+  products: string[];
+  types: string[];
+}
+
+export interface FormField {
+  id: string;
+  label: string;
+  type: 'text' | 'date' | 'select' | 'checkbox' | 'user' | 'product' | 'projectType';
+  required: boolean;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface Project {
@@ -10,7 +36,7 @@ export interface Project {
   name: string;
   initiatorName: string;
   description: string;
-  type: 'Marketing' | 'Développement' | 'Design' | 'Interne';
+  type: string;
   product: string;
   status: 'Nouveau' | 'En cours' | 'En révision' | 'Terminé';
   priority: 'Basse' | 'Moyenne' | 'Haute';
@@ -18,6 +44,8 @@ export interface Project {
   deadline: string;
   assignedTo?: string | User;
   createdAt: string;
+  departmentId?: string;
+  _customFields?: Record<string, unknown>;
 }
 
 export type ViewType = 
@@ -28,9 +56,13 @@ export type ViewType =
   | 'reporting' 
   | 'urgences' 
   | 'demarrer' 
-  | 'stats';
+  | 'stats'
+  | 'cockpit'
+  | 'dept_cockpit';
 
 export interface NavigationContextType {
   view: ViewType;
   setView: (view: ViewType) => void;
+  selectedDepartmentId: string | null;
+  setSelectedDepartmentId: (id: string | null) => void;
 }

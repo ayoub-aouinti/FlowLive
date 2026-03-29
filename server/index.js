@@ -135,15 +135,192 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id || user.id, name: user.name, role: user.role },
+      { id: user._id || user.id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId },
       process.env.JWT_SECRET || 'secret_key',
       { expiresIn: '8h' }
     );
 
     res.json({ 
       token, 
-      user: { id: user._id || user.id, name: user.name, role: user.role } 
+      user: { id: user._id || user.id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId } 
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// MULTI-TENANCY ROUTES (DEPARTMENTS)
+app.get('/api/departments', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    const departments = readLocal('departments.json');
+    res.json(departments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/departments', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    const departments = readLocal('departments.json');
+    const newDept = { 
+       ...req.body, 
+       id: 'dept_' + Date.now().toString(), 
+       products: [], 
+       types: [],
+       activePages: req.body.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+       pageConfigs: {}
+    };
+    departments.push(newDept);
+    writeLocal('departments.json', departments);
+    res.status(201).json(newDept);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/departments/:id/config', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    const departments = readLocal('departments.json');
+    const index = departments.findIndex(d => d.id === req.params.id);
+    if (index === -1) return res.status(404).json({ message: 'Department not found' });
+
+    // Allow: the admin's token departmentId matches, OR the admin is listed as adminId of the dept
+    const dept = departments[index];
+    const isAuthorized = req.user.departmentId === req.params.id || dept.adminId === req.user.email;
+    if (!isAuthorized) {
+      return res.status(403).json({ message: 'Not authorized for this department' });
+    }
+
+    if (req.body.products) departments[index].products = req.body.products;
+    if (req.body.types) departments[index].types = req.body.types;
+    if (req.body.pageConfigs) departments[index].pageConfigs = req.body.pageConfigs;
+    if (req.body.formFields) departments[index].formFields = req.body.formFields;
+    
+    writeLocal('departments.json', departments);
+    res.json(departments[index]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/departments/my-config', authenticateToken, async (req, res) => {
+  try {
+    const departments = readLocal('departments.json');
+    // Primary: look up by departmentId in token
+    // Fallback: find the first department where this user is adminId (by email)
+    let dept;
+    if (req.user.role === 'superadmin' && req.query.departmentId) {
+      dept = departments.find(d => d.id === req.query.departmentId);
+    } else {
+      dept = departments.find(d => d.id === req.user.departmentId);
+      if (!dept && req.user.role === 'admin') {
+        dept = departments.find(d => d.adminId === req.user.email);
+      }
+    }
+    if (!dept) return res.json({ products: [], types: [] });
+    res.json({ 
+       departmentId: dept.id,
+       departmentName: dept.name,
+       products: dept.products || [], 
+       types: dept.types || [],
+       activePages: dept.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+       pageConfigs: dept.pageConfigs || {},
+       formFields: dept.formFields || null
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// NOTIFICATION ROUTES
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const notifications = readLocal('notifications.json');
+    const userNotifications = notifications
+      .filter(n => n.userId === req.user.id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(userNotifications);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const notifications = readLocal('notifications.json');
+    const index = notifications.findIndex(n => n.id === req.params.id && n.userId === req.user.id);
+    if (index !== -1) {
+      notifications[index].read = true;
+      writeLocal('notifications.json', notifications);
+    }
+    res.json({ message: 'Notification marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    const notifications = readLocal('notifications.json');
+    notifications.forEach(n => {
+      if (n.userId === req.user.id) n.read = true;
+    });
+    writeLocal('notifications.json', notifications);
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete('/api/notifications/:id', authenticateToken, async (req, res) => {
+  try {
+    let notifications = readLocal('notifications.json');
+    notifications = notifications.filter(n => !(n.id === req.params.id && n.userId === req.user.id));
+    writeLocal('notifications.json', notifications);
+    res.json({ message: 'Notification deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Helper to create notifications
+const createNotification = (userId, title, message, link = null) => {
+  try {
+    const notifications = readLocal('notifications.json');
+    const newNotif = {
+      id: 'notif_' + Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      userId,
+      title,
+      message,
+      link,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    notifications.push(newNotif);
+    writeLocal('notifications.json', notifications);
+    io.emit('notification_added', newNotif);
+    return newNotif;
+  } catch (err) {
+    console.error('Error creating notification:', err);
+  }
+};
+app.post('/api/users', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    const users = readLocal('users.json');
+    const newUser = { 
+      ...req.body, 
+      id: 'usr_' + Date.now().toString(),
+      departmentId: req.user.departmentId 
+    };
+    users.push(newUser);
+    writeLocal('users.json', users);
+    res.status(201).json({ id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -153,17 +330,27 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
     let query = {};
-    if (req.user.role === 'user') {
-      // Users can see projects assigned to them OR projects they initiated
-      query = { 
-        $or: [
-          { assignedTo: req.user.id },
-          { initiatorName: req.user.name }
-        ]
-      };
+    if (USE_LOCAL_DB) {
+      let projects = readLocal('projects.json');
+      
+      if (req.user.role === 'admin') {
+        projects = projects.filter(p => p.departmentId === req.user.departmentId);
+      } else if (req.user.role === 'initiateur') {
+        projects = projects.filter(p => p.departmentId === req.user.departmentId && p.initiatorId === req.user.id);
+      } else if (req.user.role === 'worker') {
+        projects = projects.filter(p => p.departmentId === req.user.departmentId && p.assignedTo === req.user.id);
+      } else if (req.user.role === 'superadmin') {
+        if (req.query.departmentId) {
+          projects = projects.filter(p => p.departmentId === req.query.departmentId);
+        } else {
+          // By default Superadmin sees nothing unless a department is selected
+          projects = [];
+        }
+      }
+      
+      projects.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      return res.json(projects);
     }
-    const projects = await Project.find(query).sort({ deadline: 1 });
-    res.json(projects);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -174,15 +361,21 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     if (USE_LOCAL_DB) {
       const users = readLocal('users.json');
-      res.json(users.map(u => ({ name: u.name, role: u.role, _id: u.id || u.email })));
-    } else {
-      const users = await User.find({}, 'name role _id');
-      res.json(users);
+      let filteredUsers = [];
+      
+      if (req.user.role === 'admin') {
+        filteredUsers = users.filter(u => u.departmentId === req.user.departmentId);
+      } else if (req.user.role === 'initiateur') {
+        filteredUsers = users.filter(u => u.departmentId === req.user.departmentId && u.role === 'worker');
+      }
+
+      res.json(filteredUsers.map(u => ({ name: u.name, role: u.role, _id: u.id, email: u.email })));
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
@@ -192,6 +385,7 @@ io.on('connection', (socket) => {
     try {
       let newProject;
       if (USE_LOCAL_DB) {
+        // Socket doesn't easily have req.user, so frontend must send departmentId and initiatorId
         newProject = await Project.save(data);
       } else {
         newProject = new Project(data);
@@ -200,9 +394,46 @@ io.on('connection', (socket) => {
 
       // Broadcast the new project to all connected clients
       io.emit('project_added', newProject);
+
+      // Create notification for assigned user
+      if (data.assignedTo) {
+        createNotification(
+          data.assignedTo,
+          'Nouveau projet assigné',
+          `On vous a assigné le projet: ${data.name}`,
+          `/table` // Default link
+        );
+      }
     } catch (error) {
       console.error('Error adding project:', error);
       socket.emit('error', { message: 'Failed to add project' });
+    }
+  });
+
+  socket.on('update_project_status', async (data) => {
+    try {
+      if (USE_LOCAL_DB) {
+        const projects = readLocal('projects.json');
+        const pIndex = projects.findIndex(p => p._id === data.projectId);
+        if (pIndex !== -1) {
+          projects[pIndex].status = data.status;
+          writeLocal('projects.json', projects);
+          const updatedProject = projects[pIndex];
+          io.emit('project_updated', updatedProject);
+
+          // Create notification for project initiator
+          if (updatedProject.initiatorId) {
+             createNotification(
+               updatedProject.initiatorId,
+               'Mise à jour du statut',
+               `Le statut du projet "${updatedProject.name}" est passé à "${updatedProject.status}"`,
+               `/table`
+             );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating project:', error);
     }
   });
 

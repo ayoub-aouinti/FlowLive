@@ -15,14 +15,12 @@ import {
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/useNavigation';
-import type { Project, User } from '../types';
+import type { Project, User, FormField } from '../types';
 import ProjectForm from './ProjectForm';
 import logo from '../assets/logo.png';
 import CalendarView from './views/CalendarView';
 import ReportingView from './views/ReportingView';
 import StatsView from './views/StatsView';
-
-
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
@@ -45,19 +43,31 @@ const getStatusColor = (status: string) => {
 const Dashboard: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const { view, setView } = useNavigation();
+  const { view, setView, selectedDepartmentId } = useNavigation();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [deptConfig, setDeptConfig] = useState<{
+    departmentId: string;
+    departmentName: string;
+    products: string[];
+    types: string[];
+    activePages: string[];
+    pageConfigs: Record<string, any>;
+    formFields: FormField[] | null;
+  } | null>(null);
   const { token } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectsRes, usersRes] = await Promise.all([
-          axios.get('http://localhost:5001/api/projects', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:5001/api/users', { headers: { Authorization: `Bearer ${token}` } })
+        const params = selectedDepartmentId ? { departmentId: selectedDepartmentId } : {};
+        const [projectsRes, usersRes, configRes] = await Promise.all([
+          axios.get('http://localhost:5001/api/projects', { params, headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('http://localhost:5001/api/users', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('http://localhost:5001/api/departments/my-config', { params, headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: null }))
         ]);
         setProjects(projectsRes.data);
         setUsers(usersRes.data);
+        if (configRes.data) setDeptConfig(configRes.data);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -69,8 +79,17 @@ const Dashboard: React.FC = () => {
       setProjects((prev) => [...prev, newProject].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()));
     });
 
-    return () => { socket.off('project_added'); };
-  }, [token]);
+    return () => { 
+      socket.off('project_added'); 
+      socket.off('project_updated');
+    };
+  }, [token, selectedDepartmentId]);
+
+  const handleUpdateStatus = (projectId: string, status: string) => {
+    socket.emit('update_project_status', { projectId, status });
+  };
+
+  const userRole = token ? JSON.parse(atob(token.split('.')[1])).role : 'guest';
 
   const getUserName = (userIdOrObj: string | User | undefined) => {
     if (!userIdOrObj) return '-';
@@ -78,6 +97,11 @@ const Dashboard: React.FC = () => {
       return users.find(u => u._id === userIdOrObj)?.name || '-';
     }
     return userIdOrObj.name || '-';
+  };
+
+  const isPageActive = (pageId: string) => {
+    if (!deptConfig || !deptConfig.activePages) return true;
+    return deptConfig.activePages.includes(pageId);
   };
 
   return (
@@ -88,72 +112,90 @@ const Dashboard: React.FC = () => {
           <h1 className="text-[40px] font-bold text-[#1a4f8b] leading-tight flex items-center gap-2">
             Flow<span className="text-[#8cc63f]">Live</span>
           </h1>
-          <p className="text-[#9b9a97] text-lg font-medium -mt-1 tracking-tight">Planning Département Digital</p>
+          <p className="text-[#9b9a97] text-lg font-medium -mt-1 tracking-tight capitalize">
+            {deptConfig?.departmentName || 'Planning Département Digital'}
+          </p>
         </div>
       </div>
 
       <div className="flex items-center gap-1 border-b border-[#ececeb] mb-4 overflow-x-auto scrollbar-hide">
-        <button 
-          onClick={() => setView('table')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
-        >
-          <TableIcon size={14} />
-          Table
-        </button>
-        <button 
-          onClick={() => setView('kanban')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
-        >
-          <Columns size={14} />
-          Pipeline - Demandes et pr...
-        </button>
-        <button 
-          onClick={() => setView('timeline')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
-        >
-          <CalendarIcon size={14} />
-          Planning - Equipe digitale
-        </button>
+        {isPageActive('table') && (
+          <button 
+            onClick={() => setView('table')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
+          >
+            <TableIcon size={14} />
+            Table
+          </button>
+        )}
+        
+        {isPageActive('kanban') && (
+          <button 
+            onClick={() => setView('kanban')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
+          >
+            <Columns size={14} />
+            Pipeline - Demandes et pr...
+          </button>
+        )}
 
-        <button 
-          onClick={() => setView('calendrier')}
-          className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-            view === 'calendrier' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
-          }`}
-        >
-          <CalendarIcon size={14} />
-          Calendrier Livrables
-        </button>
+        {isPageActive('timeline') && (
+          <button 
+            onClick={() => setView('timeline')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
+          >
+            <CalendarIcon size={14} />
+            Planning - Equipe digitale
+          </button>
+        )}
 
-        <button 
-          onClick={() => setView('reporting')}
-          className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-            view === 'reporting' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
-          }`}
-        >
-          <BarChart2 size={14} />
-          Reporting
-        </button>
+        {isPageActive('calendrier') && (
+          <button 
+            onClick={() => setView('calendrier')}
+            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
+              view === 'calendrier' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+            }`}
+          >
+            <CalendarIcon size={14} />
+            Calendrier Livrables
+          </button>
+        )}
 
-        <button 
-          onClick={() => setView('urgences')}
-          className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-            view === 'urgences' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
-          }`}
-        >
-          <AlertCircle size={14} className="text-[#eb5757]" />
-          Urgences
-        </button>
+        {isPageActive('reporting') && (
+          <button 
+            onClick={() => setView('reporting')}
+            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
+              view === 'reporting' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+            }`}
+          >
+            <BarChart2 size={14} />
+            Reporting
+          </button>
+        )}
 
-        <button 
-          onClick={() => setView('stats')}
-          className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-            view === 'stats' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
-          }`}
-        >
-          <PieChart size={14} />
-          Stats
-        </button>
+        {isPageActive('urgences') && (
+          <button 
+            onClick={() => setView('urgences')}
+            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
+              view === 'urgences' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+            }`}
+          >
+            <AlertCircle size={14} className="text-[#eb5757]" />
+            Urgences
+          </button>
+        )}
+
+        {isPageActive('stats') && (
+          <button 
+            onClick={() => setView('stats')}
+            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
+              view === 'stats' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+            }`}
+          >
+            <PieChart size={14} />
+            Stats
+          </button>
+        )}
         
         <div className="flex-1" />
         
@@ -161,19 +203,22 @@ const Dashboard: React.FC = () => {
           <button className="p-1.5 hover:bg-[#efefed] rounded transition-colors text-[#9b9a97]"><Search size={16} /></button>
           <button className="p-1.5 hover:bg-[#efefed] rounded transition-colors text-[#9b9a97]"><Filter size={16} /></button>
           <button className="p-1.5 hover:bg-[#efefed] rounded transition-colors text-[#9b9a97]"><ArrowUpDown size={16} /></button>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1 bg-[#1a4f8b] hover:bg-[#154070] text-white text-xs font-bold px-3 py-1.5 rounded transition-all shadow-md active:scale-95"
-          >
-            Nouveau
-            <Plus size={14} />
-          </button>
+          
+          {token && JSON.parse(atob(token.split('.')[1])).role === 'initiateur' && (
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-1 bg-[#1a4f8b] hover:bg-[#154070] text-white text-xs font-bold px-3 py-1.5 rounded transition-all shadow-md active:scale-95"
+            >
+              Nouveau
+              <Plus size={14} />
+            </button>
+          )}
         </div>
       </div>
 
       <div className="min-h-[500px]">
-        {view === 'table' && <TableView projects={projects} getUserName={getUserName} />}
-        {view === 'kanban' && <KanbanView projects={projects} />}
+        {view === 'table' && <TableView projects={projects} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} formFields={deptConfig?.formFields || undefined} />}
+        {view === 'kanban' && <KanbanView projects={projects} userRole={userRole} onUpdateStatus={handleUpdateStatus} />}
         {view === 'timeline' && <TimelineView projects={projects} getUserName={getUserName} />}
         {view === 'calendrier' && <CalendarView projects={projects} />}
         {view === 'reporting' && <ReportingView projects={projects} />}
@@ -197,58 +242,114 @@ const Dashboard: React.FC = () => {
   );
 };
 
-const TableView = ({ projects, getUserName }: { projects: Project[], getUserName: (u: string | User | undefined) => string }) => (
-  <div className="overflow-x-auto -mx-12 px-12">
-    <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
-      <thead>
-        <tr className="text-[#9b9a97] text-[12px] font-normal border-y border-[#ececeb]">
-          <th className="px-2 py-2 w-[30%] border-r border-[#ececeb] font-normal">Nom du projet (Produit)</th>
-          <th className="px-2 py-2 w-[15%] border-r border-[#ececeb] font-normal">Initiateur</th>
-          <th className="px-2 py-2 w-[15%] border-r border-[#ececeb] font-normal">Affectation</th>
-          <th className="px-2 py-2 w-[12%] border-r border-[#ececeb] font-normal">Produit</th>
-          <th className="px-2 py-2 w-[12%] border-r border-[#ececeb] font-normal">Statut</th>
-          <th className="px-2 py-2 w-[8%] border-r border-[#ececeb] font-normal">Urgent</th>
-          <th className="px-2 py-2 w-[10%] font-normal">Priorité</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-[#ececeb]">
-        {projects.map((p) => (
-          <tr key={p._id} className="hover:bg-[#f7f7f5] transition-colors group text-sm">
-            <td className="px-2 py-2 border-r border-[#ececeb]">
-              <div className="flex items-center gap-2">
-                <FileIcon />
-                <span className="text-[#37352f] truncate">{p.name}</span>
-              </div>
-            </td>
-            <td className="px-2 py-2 border-r border-[#ececeb] text-[#37352f]">{p.initiatorName}</td>
-            <td className="px-2 py-2 border-r border-[#ececeb]">
-              <span className="bg-[#d3e5ef] text-[#183347] px-1.5 py-0.5 rounded text-[12px] font-medium">
-                {getUserName(p.assignedTo)}
-              </span>
-            </td>
-            <td className="px-2 py-2 border-r border-[#ececeb] text-[#37352f]">{p.product}</td>
-            <td className="px-2 py-2 border-r border-[#ececeb]">
-              <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[12px] font-medium ${getStatusColor(p.status)}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'Terminé' ? 'bg-[#1c3829]' : 'bg-current'}`} />
-                {p.status}
-              </span>
-            </td>
-            <td className="px-2 py-2 border-r border-[#ececeb] text-center">
-              <input type="checkbox" checked={p.urgent} readOnly className="rounded border-[#ececeb] text-[#2383e2] focus:ring-0 shadow-none outline-none" />
-            </td>
-            <td className="px-2 py-1 flex items-center">
-              <span className={`px-1.5 py-0.5 rounded text-[12px] font-medium ${getPriorityColor(p.priority)}`}>
-                {p.priority}
-              </span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
+/* FormField is now imported from ../types */
 
-const KanbanView = ({ projects }: { projects: Project[] }) => {
+const DEFAULT_FORM_FIELDS: FormField[] = [
+  { id: 'f_initiator', label: 'Initiateur', type: 'text', required: true },
+  { id: 'f_assignedTo', label: 'Affectation', type: 'user', required: true },
+  { id: 'f_product', label: 'Produit', type: 'product', required: false },
+  { id: 'f_priority', label: 'Priorité', type: 'select', required: false },
+  { id: 'f_urgent', label: 'Urgent', type: 'checkbox', required: false },
+];
+
+const getCellValue = (field: FormField, p: Project, getUserName: (u: string | User | undefined) => string) => {
+  if (field.type === 'text' && field.id === 'f_initiator') return p.initiatorName;
+  if (field.type === 'user') return getUserName(p.assignedTo);
+  if (field.type === 'product') return p.product;
+  if (p._customFields && field.id in p._customFields) return String(p._customFields[field.id] ?? '');
+  return '-';
+};
+
+const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields }: {
+  projects: Project[],
+  getUserName: (u: string | User | undefined) => string,
+  userRole: string,
+  onUpdateStatus: (id: string, s: string) => void,
+  formFields?: FormField[]
+}) => {
+  const fields = formFields && formFields.length > 0 ? formFields : DEFAULT_FORM_FIELDS;
+
+  return (
+    <div className="overflow-x-auto -mx-12 px-12">
+      <table className="w-full text-left border-collapse min-w-[900px]">
+        <thead>
+          <tr className="text-[#9b9a97] text-[12px] font-normal border-y border-[#ececeb]">
+            <th className="px-2 py-2 border-r border-[#ececeb] font-normal w-[28%]">Nom du projet</th>
+            {/* Status always displayed but last among auto fields */}
+            {fields.map(f => (
+              <th key={f.id} className="px-2 py-2 border-r border-[#ececeb] font-normal">{f.label}</th>
+            ))}
+            <th className="px-2 py-2 font-normal w-[12%]">Statut</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#ececeb]">
+          {projects.map((p) => (
+            <tr key={p._id} className="hover:bg-[#f7f7f5] transition-colors group text-sm">
+              <td className="px-2 py-2 border-r border-[#ececeb]">
+                <div className="flex items-center gap-2">
+                  <FileIcon />
+                  <span className="text-[#37352f] truncate">{p.name}</span>
+                </div>
+              </td>
+              {fields.map(f => {
+                if (f.type === 'user') {
+                  return (
+                    <td key={f.id} className="px-2 py-2 border-r border-[#ececeb]">
+                      <span className="bg-[#d3e5ef] text-[#183347] px-1.5 py-0.5 rounded text-[12px] font-medium">
+                        {getUserName(p.assignedTo)}
+                      </span>
+                    </td>
+                  );
+                }
+                if (f.type === 'checkbox') {
+                  const val = f.id === 'f_urgent' ? p.urgent : !!(p._customFields?.[f.id]);
+                  return (
+                    <td key={f.id} className="px-2 py-2 border-r border-[#ececeb] text-center">
+                      <input type="checkbox" checked={!!val} readOnly className="rounded border-[#ececeb] text-[#2383e2] focus:ring-0" />
+                    </td>
+                  );
+                }
+                if (f.type === 'select' && f.id === 'f_priority') {
+                  return (
+                    <td key={f.id} className="px-2 py-1 border-r border-[#ececeb]">
+                      <span className={`px-1.5 py-0.5 rounded text-[12px] font-medium ${getPriorityColor(p.priority)}`}>{p.priority}</span>
+                    </td>
+                  );
+                }
+                return (
+                  <td key={f.id} className="px-2 py-2 border-r border-[#ececeb] text-[#37352f]">
+                    {getCellValue(f, p, getUserName)}
+                  </td>
+                );
+              })}
+              <td className="px-2 py-2 border-r border-[#ececeb]">
+                {userRole === 'worker' ? (
+                  <select
+                    className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[12px] font-medium outline-none border-none cursor-pointer ${getStatusColor(p.status)}`}
+                    value={p.status}
+                    onChange={(e) => onUpdateStatus(p._id, e.target.value)}
+                  >
+                    <option value="Nouveau">Nouveau</option>
+                    <option value="En cours">En cours</option>
+                    <option value="En révision">En révision</option>
+                    <option value="Terminé">Terminé</option>
+                  </select>
+                ) : (
+                  <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[12px] font-medium ${getStatusColor(p.status)}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'Terminé' ? 'bg-[#1c3829]' : 'bg-current'}`} />
+                    {p.status}
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const KanbanView = ({ projects, userRole, onUpdateStatus }: { projects: Project[], userRole: string, onUpdateStatus: (id: string, s: string) => void }) => {
   const columns = ['Nouveau', 'En cours', 'En révision', 'Terminé'];
   return (
     <div className="flex gap-4 overflow-x-auto pb-8 -mx-12 px-12 scrollbar-hide">
@@ -269,13 +370,28 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
                     <FileIcon />
                     {p.name}
                   </div>
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getPriorityColor(p.priority)}`}>
-                      {p.priority}
-                    </span>
-                    <span className="text-[10px] text-[#9b9a97] bg-[#f7f7f5] px-1.5 py-0.5 rounded">
-                      {p.product}
-                    </span>
+                  <div className="flex flex-wrap gap-1.5 mt-3 justify-between items-center">
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getPriorityColor(p.priority)}`}>
+                        {p.priority}
+                      </span>
+                      <span className="text-[10px] text-[#9b9a97] bg-[#f7f7f5] px-1.5 py-0.5 rounded">
+                        {p.product}
+                      </span>
+                    </div>
+                    {userRole === 'worker' && (
+                      <select 
+                        value={p.status}
+                        onChange={(e) => onUpdateStatus(p._id, e.target.value)}
+                        className="text-[10px] font-bold text-[#1a4f8b] bg-transparent border-none p-0 cursor-pointer outline-none"
+                        onClick={e => e.stopPropagation()}
+                      >
+                         <option value="Nouveau">→ Nouveau</option>
+                         <option value="En cours">→ En cours</option>
+                         <option value="En révision">→ En révision</option>
+                         <option value="Terminé">→ Terminé</option>
+                      </select>
+                    )}
                   </div>
                 </div>
               ))}

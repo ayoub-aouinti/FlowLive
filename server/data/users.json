@@ -1,5 +1,7 @@
 [
-  {"name": "Super Admin", "email": "super@flow.com", "password": "password123", "role": "superadmin"},
-  {"name": "Admin User", "email": "admin@flow.com", "password": "password123", "role": "admin"},
-  {"name": "Standard User", "email": "user@flow.com", "password": "password123", "role": "user"}
+  {"id": "super_1", "name": "Super Admin", "email": "super@flow.com", "password": "password123", "role": "superadmin", "departmentId": null},
+  {"id": "admin_1", "name": "Admin User", "email": "admin@flow.com", "password": "password123", "role": "admin", "departmentId": "dept_1"},
+  {"id": "user_1", "name": "Standard User", "email": "user@flow.com", "password": "password123", "role": "worker", "departmentId": "dept_1"},
+  {"id": "init_1", "name": "Initiateur Test", "email": "init@flow.com", "password": "password123", "role": "initiateur", "departmentId": "dept_1"}
 ]
+

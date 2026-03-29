@@ -1,0 +1,20 @@
+[
+  {
+    "id": "notif_1774809877026fwea1",
+    "userId": "user_1",
+    "title": "Nouveau projet assigné",
+    "message": "On vous a assigné le projet: dev",
+    "link": "/table",
+    "read": true,
+    "createdAt": "2026-03-29T18:44:37.026Z"
+  },
+  {
+    "id": "notif_1774809951986e71w7",
+    "userId": "user_1",
+    "title": "Nouveau projet assigné",
+    "message": "On vous a assigné le projet: dev",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-03-29T18:45:51.986Z"
+  }
+]
