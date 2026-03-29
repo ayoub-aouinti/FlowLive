@@ -10,13 +10,15 @@ interface InboxPanelProps {
   onNotificationRead?: () => void;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
 const InboxPanel: React.FC<InboxPanelProps> = ({ onClose, onNotificationRead }) => {
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const { token, user } = useAuth();
 
   const fetchNotifications = React.useCallback(() => {
     if (token) {
-      axios.get('http://localhost:5001/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
+      axios.get(`${API_URL}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setNotifications(res.data))
         .catch(err => console.error(err));
     }
@@ -38,7 +40,7 @@ const InboxPanel: React.FC<InboxPanelProps> = ({ onClose, onNotificationRead }) 
 
   const markAsRead = async (id: string) => {
     try {
-      await axios.put(`http://localhost:5001/api/notifications/${id}/read`, {}, {
+      await axios.put(`${API_URL}/api/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -50,7 +52,7 @@ const InboxPanel: React.FC<InboxPanelProps> = ({ onClose, onNotificationRead }) 
 
   const markAllAsRead = async () => {
     try {
-      await axios.put('http://localhost:5001/api/notifications/read-all', {}, {
+      await axios.put(`${API_URL}/api/notifications/read-all`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -62,7 +64,7 @@ const InboxPanel: React.FC<InboxPanelProps> = ({ onClose, onNotificationRead }) 
 
   const deleteNotification = async (id: string) => {
     try {
-      await axios.delete(`http://localhost:5001/api/notifications/${id}`, {
+      await axios.delete(`${API_URL}/api/notifications/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.filter(n => n.id !== id));

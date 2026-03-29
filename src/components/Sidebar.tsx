@@ -26,6 +26,8 @@ import type { Project, Notification } from '../types';
 import { socket } from '../services/socket';
 import logo from '../assets/logo.png';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
 const Sidebar: React.FC = () => {
   const { user, logout, token } = useAuth();
   const { view, setView, selectedDepartmentId, setSelectedDepartmentId } = useNavigation();
@@ -45,7 +47,7 @@ const Sidebar: React.FC = () => {
 
   useEffect(() => {
     if (token) {
-      axios.get('http://localhost:5001/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
+      axios.get(`${API_URL}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setNotifications(res.data))
         .catch(err => console.error(err));
     }
@@ -62,7 +64,7 @@ const Sidebar: React.FC = () => {
 
   useEffect(() => {
     if (token && user?.role === 'superadmin') {
-      axios.get('http://localhost:5001/api/departments', { headers: { Authorization: `Bearer ${token}` } })
+      axios.get(`${API_URL}/api/departments`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setDepartments(res.data))
         .catch(err => console.error(err));
     }
@@ -70,7 +72,7 @@ const Sidebar: React.FC = () => {
 
   useEffect(() => {
     if (token && user?.role !== 'superadmin' && user?.role !== 'guest') {
-      axios.get('http://localhost:5001/api/departments/my-config', { headers: { Authorization: `Bearer ${token}` } })
+      axios.get(`${API_URL}/api/departments/my-config`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setDeptConfig(res.data))
         .catch(err => console.error(err));
     }
@@ -240,7 +242,7 @@ const Sidebar: React.FC = () => {
       {activeModal === 'inbox' && <InboxPanel onClose={() => setActiveModal(null)} onNotificationRead={() => {
          // Refresh notifications when panel closes or a notification is read
          if (token) {
-           axios.get('http://localhost:5001/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
+           axios.get(`${API_URL}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } })
              .then(res => setNotifications(res.data));
          }
       }} />}

@@ -40,6 +40,8 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
 const Dashboard: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -59,11 +61,11 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const params = selectedDepartmentId ? { departmentId: selectedDepartmentId } : {};
+        const queryString = selectedDepartmentId ? `?departmentId=${selectedDepartmentId}` : '';
         const [projectsRes, usersRes, configRes] = await Promise.all([
-          axios.get('http://localhost:5001/api/projects', { params, headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:5001/api/users', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:5001/api/departments/my-config', { params, headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: null }))
+          axios.get(`${API_URL}/api/projects${queryString}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_URL}/api/users`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_URL}/api/departments/my-config${queryString}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: null }))
         ]);
         setProjects(projectsRes.data);
         setUsers(usersRes.data);

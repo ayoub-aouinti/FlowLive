@@ -32,6 +32,8 @@ interface ProjectFormProps {
   onClose?: () => void;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
 const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
   const { user, token } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
@@ -44,8 +46,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
     const fetchData = async () => {
       try {
         const [usersRes, configRes] = await Promise.all([
-          axios.get('http://localhost:5001/api/users', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:5001/api/departments/my-config', { headers: { Authorization: `Bearer ${token}` } })
+          axios.get(`${API_URL}/api/users`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_URL}/api/departments/my-config`, { headers: { Authorization: `Bearer ${token}` } })
         ]);
         setUsers(usersRes.data);
         setConfig(configRes.data);

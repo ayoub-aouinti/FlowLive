@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Building2, Plus, Search } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import type { Department } from '../../types';
 
 const AVAILABLE_PAGES = [
@@ -13,7 +14,10 @@ const AVAILABLE_PAGES = [
   { id: 'stats', label: 'Stats' }
 ];
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
 export function CockpitView() {
+  const { token } = useAuth();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDept, setNewDept] = useState({ 
@@ -22,27 +26,26 @@ export function CockpitView() {
     activePages: ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'] 
   });
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = React.useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5001/api/departments', {
+      const response = await axios.get(`${API_URL}/api/departments`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDepartments(response.data);
     } catch (err) {
       console.error('Failed to fetch departments:', err);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchDepartments();
-  }, []);
+  }, [fetchDepartments]);
 
   const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5001/api/departments', newDept, {
+      await axios.post(`${API_URL}/api/departments`, newDept, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowAddForm(false);
