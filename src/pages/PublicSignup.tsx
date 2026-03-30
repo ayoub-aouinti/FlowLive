@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { UserPlus, Mail, Lock, User as UserIcon, Loader2, CheckCircle, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Loader2, CheckCircle, ArrowRight } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
