@@ -1,0 +1,49 @@
+{
+  "common": {
+    "dashboard": "لوحة القيادة",
+    "inbox": "صندوق الوارد",
+    "settings": "الإعدادات",
+    "cockpit": "قمرة القيادة للقسم",
+    "logout": "تسجيل الخروج",
+    "search": "بحث",
+    "new": "جديد",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "loading": "جاري التحميل...",
+    "edit": "تعديل",
+    "delete": "حذف"
+  },
+  "dashboard": {
+    "title": "WorkPlan",
+    "subtitle": "حسّن سير عملك بذكاء",
+    "table": "جدول",
+    "kanban": "خط الأنابيب",
+    "timeline": "التخطيط",
+    "calendar": "التقويم",
+    "reporting": "التقارير",
+    "stats": "الإحصائيات",
+    "urgencies": "حالات الطوارئ"
+  },
+  "project": {
+    "name": "اسم المشروع",
+    "status": "الحالة",
+    "priority": "الأولوية",
+    "assignee": "التعيين",
+    "initiator": "صاحب الطلب",
+    "deadline": "الموعد النهائي",
+    "product": "المنتج",
+    "urgent": "عاجل"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirm_password": "تأكيد كلمة المرور",
+    "forgot_password": "هل نسيت كلمة المرور؟"
+  },
+  "theme": {
+    "light": "الوضع الفاتح",
+    "dark": "الوضع الداكن"
+  }
+}

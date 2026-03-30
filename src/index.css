@@ -7,10 +7,37 @@
   --notion-text: #0f172a; /* Slate-900 */
   --notion-text-light: #64748b; /* Slate-500 */
   --notion-hover: #f1f5f9; /* Slate-100 */
-  --brand-primary: #1e293b; /* Slate-800 - Matching Logo Dark */
-  --brand-secondary: #475569; /* Slate-600 - Matching Logo Steel */
-  --brand-accent: #2563eb; /* Modern Blue */
+  --notion-active: #e2e8f0; /* Slate-200 */
+  --brand-primary: #1e293b; 
+  --brand-secondary: #475569;
+  --brand-accent: #2563eb;
   --brand-accent-hover: #1d4ed8;
+}
+
+.dark {
+  --notion-bg: #0b0f1a; /* Deep Neutral */
+  --notion-sidebar: #0f172a; /* Slate-900 */
+  --notion-border: #1e293b; /* Slate-800 */
+  --notion-elevated: #1e293b; /* Slate-800 */
+  --notion-text: #f8fafc; /* Slate-50 */
+  --notion-text-light: #94a3b8; /* Slate-400 */
+  --notion-hover: #1e293b; /* Slate-800 */
+  --notion-active: #334155; /* Slate-700 */
+  --brand-primary: #ffffff;
+  --brand-secondary: #94a3b8;
+}
+
+/* Premium Dark Mode Input Refinement */
+.dark input, 
+.dark select, 
+.dark textarea {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark input::placeholder {
+  color: #64748b !important;
 }
 
 body {
@@ -23,6 +50,7 @@ body {
   color: var(--notion-text);
   background-color: var(--notion-bg);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -36,4 +64,9 @@ body {
 /* Notion-like components */
 .notion-pill {
   @apply px-2 py-0.5 rounded text-[11px] font-medium transition-colors;
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  text-align: right;
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/useNavigation';
 import Sidebar from './Sidebar';
@@ -12,6 +13,7 @@ interface ProjectLayoutProps {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
+  const { t, i18n } = useTranslation();
   const { token } = useAuth();
   const { selectedDepartmentId } = useNavigation();
   const [config, setConfig] = useState<{
@@ -57,13 +59,12 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         fetchConfig();
-        // Trigger a custom event so other components (like Dashboard) know to refresh
         window.dispatchEvent(new CustomEvent('dept_config_updated'));
       };
       reader.readAsDataURL(file);
     } catch (err) {
       console.error(`Failed to update ${type}:`, err);
-      alert(`Erreur lors du chargement de l'image`);
+      alert(t('common.upload_error') || `Erreur lors du chargement de l'image`);
     } finally {
       if (type === 'cover') setIsUpdatingCover(false);
       else setIsUpdatingLogo(false);
@@ -73,8 +74,10 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
   const user = token ? JSON.parse(atob(token.split('.')[1])) : null;
   const canEdit = user?.role === 'admin' || user?.role === 'superadmin';
 
+  const isRtl = i18n.language === 'ar';
+
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className={`flex min-h-screen bg-[var(--notion-bg)] transition-colors duration-300 ${isRtl ? 'flex-row-reverse' : ''}`}>
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0">
         {/* Cover Image Area */}
@@ -90,7 +93,7 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           
           {canEdit && (
-            <div className="absolute bottom-4 right-8 flex gap-2">
+            <div className={`absolute bottom-4 ${isRtl ? 'left-8' : 'right-8'} flex gap-2`}>
               <input 
                 type="file" 
                 ref={coverInputRef} 
@@ -101,10 +104,10 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
               <button 
                 onClick={() => coverInputRef.current?.click()}
                 disabled={isUpdatingCover}
-                className="bg-white/90 hover:bg-white text-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                className="bg-white/90 hover:bg-white dark:bg-slate-800 dark:text-white dark:border-slate-700 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
               >
                 {isUpdatingCover ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
-                Changer la couverture
+                {t('common.edit')}
               </button>
             </div>
           )}
@@ -113,9 +116,9 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
         {/* Content Area */}
         <div className="max-w-7xl mx-auto w-full px-12 pb-20 relative">
           {/* Logo Area */}
-          <div className="absolute -top-16 left-12 group/logo">
+          <div className={`absolute -top-16 ${isRtl ? 'right-12' : 'left-12'} group/logo`}>
             <div className="relative">
-              <div className="w-32 h-32 rounded-3xl bg-white p-2 shadow-xl border-4 border-white overflow-hidden flex items-center justify-center text-8xl transition-transform group-hover/logo:scale-[1.02]">
+              <div className="w-32 h-32 rounded-3xl bg-white dark:bg-slate-800 p-2 shadow-xl border-4 border-white dark:border-slate-800 overflow-hidden flex items-center justify-center text-8xl transition-transform group-hover/logo:scale-[1.02]">
                 {config?.logoUrl ? (
                   <img src={config.logoUrl} className="w-full h-full object-contain rounded-xl" alt="Logo" />
                 ) : (
@@ -135,7 +138,7 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
                   <button 
                     onClick={() => logoInputRef.current?.click()}
                     disabled={isUpdatingLogo}
-                    className="absolute -bottom-2 -right-2 p-2 bg-white rounded-full shadow-lg border border-slate-100 text-slate-400 hover:text-slate-900 transition-all opacity-0 group-hover/logo:opacity-100 active:scale-90 disabled:opacity-50"
+                    className={`absolute -bottom-2 ${isRtl ? '-left-2' : '-right-2'} p-2 bg-white dark:bg-slate-700 rounded-full shadow-lg border border-slate-100 dark:border-slate-600 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all opacity-0 group-hover/logo:opacity-100 active:scale-90 disabled:opacity-50`}
                   >
                     {isUpdatingLogo ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
                   </button>

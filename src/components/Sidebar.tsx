@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Search, // Restored Search icon for Sidebar
+  Search, 
   Inbox, 
   ChevronRight, 
   Settings, 
@@ -13,11 +13,16 @@ import {
   AlertCircle,
   PlusCircle,
   PieChart,
-  Building2
+  Building2,
+  Sun,
+  Moon,
+  Languages
 } from 'lucide-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/useNavigation';
+import { useTheme } from '../context/ThemeContext';
 import type { ViewType, Department, FormField } from '../types';
 import SearchModal from './SearchModal';
 import InboxPanel from './InboxPanel';
@@ -29,6 +34,8 @@ import logo from '../assets/logo.png';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 const Sidebar: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
   const { user, logout, token } = useAuth();
   const { view, setView, selectedDepartmentId, setSelectedDepartmentId } = useNavigation();
   const [activeModal, setActiveModal] = useState<'search' | 'inbox' | 'settings' | null>(null);
@@ -44,6 +51,7 @@ const Sidebar: React.FC = () => {
     formFields: FormField[] | null;
   } | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -87,29 +95,34 @@ const Sidebar: React.FC = () => {
   }, [token]);
 
   const mainPages: { id: ViewType; label: string; icon: React.ElementType }[] = [
-    { id: 'table', label: 'Table', icon: TableIcon },
-    { id: 'kanban', label: 'Pipline - Demandes et pr...', icon: Columns },
-    { id: 'timeline', label: 'Planning - Equipe digitale', icon: Calendar },
-    { id: 'calendrier', label: 'Calendrier Livrables', icon: Calendar },
-    { id: 'reporting', label: 'Reporting', icon: BarChart2 },
-    { id: 'urgences', label: 'Urgences - à traiter imm...', icon: AlertCircle },
-    { id: 'demarrer', label: 'Démarrer projet', icon: PlusCircle },
-    { id: 'stats', label: 'Stats', icon: PieChart },
+    { id: 'table', label: t('dashboard.table'), icon: TableIcon },
+    { id: 'kanban', label: t('dashboard.kanban'), icon: Columns },
+    { id: 'timeline', label: t('dashboard.timeline'), icon: Calendar },
+    { id: 'calendrier', label: t('dashboard.calendar'), icon: Calendar },
+    { id: 'reporting', label: t('dashboard.reporting'), icon: BarChart2 },
+    { id: 'urgences', label: t('dashboard.urgencies'), icon: AlertCircle },
+    { id: 'demarrer', label: t('common.new'), icon: PlusCircle },
+    { id: 'stats', label: t('dashboard.stats'), icon: PieChart },
   ];
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+    setShowLangMenu(false);
+  };
 
   return (
     <>
-      <aside className="w-64 bg-[#fbfbfa] border-r border-[#ececeb] flex flex-col h-screen sticky top-0 select-none">
+      <aside className="w-64 bg-[var(--notion-sidebar)] border-r border-[var(--notion-border)] flex flex-col h-screen sticky top-0 select-none transition-colors duration-300">
         {/* Header / Workspace */}
         <div className="p-3 mb-2">
-          <div className="flex items-center gap-2 px-2 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors group">
+          <div className="flex items-center gap-2 px-2 py-2 hover:bg-[var(--notion-hover)] rounded-lg cursor-pointer transition-colors group">
             <img src={logo} alt="WorkPlan" className="w-8 h-8 rounded object-contain" />
             <div className="flex flex-col">
-              <span className="text-sm font-bold leading-none text-slate-800">Work<span className="text-slate-500 font-light italic">Plan</span></span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-tight mt-0.5">Workspace</span>
+              <span className="text-sm font-bold leading-none text-[var(--notion-text)]">Work<span className="text-[var(--notion-text-light)] font-light italic">Plan</span></span>
+              <span className="text-[10px] text-[var(--notion-text-light)] font-medium tracking-tight mt-0.5">Workspace</span>
             </div>
             <div className="flex-1" />
-            <ChevronRight size={14} className="text-[#9b9a97] group-hover:text-[#37352f]" />
+            <ChevronRight size={14} className="text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]" />
           </div>
         </div>
 
@@ -117,17 +130,17 @@ const Sidebar: React.FC = () => {
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto scrollbar-hide">
           <div 
             onClick={() => setActiveModal('search')}
-            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-slate-700 transition-colors group"
+            className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer text-[var(--notion-text)] transition-colors group"
           >
-            <Search size={16} className="text-slate-400 group-hover:text-slate-700" />
-            <span className="text-sm">Chercher</span>
+            <Search size={16} className="text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]" />
+            <span className="text-sm">{t('common.search')}</span>
           </div>
           <div 
             onClick={() => setActiveModal('inbox')}
-            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-slate-700 transition-colors group"
+            className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer text-[var(--notion-text)] transition-colors group"
           >
-            <Inbox size={16} className="text-slate-400 group-hover:text-slate-700" />
-            <span className="text-sm">Boîte de réception</span>
+            <Inbox size={16} className="text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]" />
+            <span className="text-sm">{t('common.inbox')}</span>
             <div className="flex-1" />
             {notifications.filter(n => !n.read).length > 0 && (
               <span className="bg-[#e11d48] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
@@ -137,41 +150,40 @@ const Sidebar: React.FC = () => {
           </div>
           <div 
             onClick={() => setActiveModal('settings')}
-            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-slate-700 transition-colors group"
+            className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer text-[var(--notion-text)] transition-colors group"
           >
-            <Settings size={16} className="text-slate-400 group-hover:text-slate-700" />
-            <span className="text-sm">Paramètres</span>
+            <Settings size={16} className="text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]" />
+            <span className="text-sm">{t('common.settings')}</span>
           </div>
           
           {user?.role === 'superadmin' && (
             <div 
               onClick={() => setView('cockpit')}
-              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group ${view === 'cockpit' ? 'bg-slate-100 text-[#1e293b] font-bold shadow-sm' : 'text-slate-700'}`}
+              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer transition-colors group ${view === 'cockpit' ? 'bg-[var(--notion-active)] text-[var(--notion-text)] font-bold shadow-sm' : 'text-[var(--notion-text)]'}`}
             >
-              <Building2 size={16} className={view === 'cockpit' ? 'text-[#1e293b]' : 'text-slate-400 group-hover:text-slate-700'} />
-              <span className="text-sm">Cockpit Super Admin</span>
+              <Building2 size={16} className={view === 'cockpit' ? 'text-[var(--brand-accent)]' : 'text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]'} />
+              <span className="text-sm border-none">Cockpit Super Admin</span>
             </div>
           )}
 
           {user?.role === 'admin' && (
             <div 
               onClick={() => setView('dept_cockpit')}
-              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group ${view === 'dept_cockpit' ? 'bg-slate-100 text-[#1e293b] font-bold shadow-sm' : 'text-slate-700'}`}
+              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer transition-colors group ${view === 'dept_cockpit' ? 'bg-[var(--notion-active)] text-[var(--notion-text)] font-bold shadow-sm' : 'text-[var(--notion-text)]'}`}
             >
-              <Building2 size={16} className={view === 'dept_cockpit' ? 'text-[#1e293b]' : 'text-slate-400 group-hover:text-slate-700'} />
-              <span className="text-sm">Cockpit Département</span>
+              <Building2 size={16} className={view === 'dept_cockpit' ? 'text-[var(--brand-accent)]' : 'text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]'} />
+              <span className="text-sm">{t('common.cockpit')}</span>
             </div>
           )}
 
           <div className="pt-6 pb-2 px-2">
-            <span className="text-[11px] font-bold text-[#91918e] uppercase tracking-wider">
-              {user?.role === 'superadmin' ? 'Systèmes Départements' : (deptConfig?.departmentName || 'Mon Département')}
+            <span className="text-[11px] font-bold text-[var(--notion-text-light)] uppercase tracking-wider">
+              {user?.role === 'superadmin' ? 'Systèmes Départements' : (deptConfig?.departmentName || t('common.workspace'))}
             </span>
           </div>
 
           <div className="space-y-0.5">
             {user?.role === 'superadmin' ? (
-              // Super Admin view: List of all departments
               departments.map((dept) => (
                 <button
                   key={dept.id}
@@ -179,16 +191,15 @@ const Sidebar: React.FC = () => {
                     setSelectedDepartmentId(dept.id);
                     setView('table');
                   }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group ${
-                    selectedDepartmentId === dept.id && view !== 'cockpit' ? 'bg-slate-100 text-[#1e293b] font-bold shadow-sm' : 'text-slate-700'
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer transition-colors group ${
+                    selectedDepartmentId === dept.id && view !== 'cockpit' ? 'bg-[var(--notion-active)] text-[var(--notion-text)] font-bold shadow-sm' : 'text-[var(--notion-text)]'
                   }`}
                 >
-                  <LayoutGrid size={16} className={selectedDepartmentId === dept.id && view !== 'cockpit' ? 'text-[#1e293b]' : 'text-slate-400'} />
+                  <LayoutGrid size={16} className={selectedDepartmentId === dept.id && view !== 'cockpit' ? 'text-[var(--brand-accent)]' : 'text-[var(--notion-text-light)]'} />
                   <span className="text-sm truncate">{dept.name}</span>
                 </button>
               ))
             ) : (
-              // Admin/Other roles view: List of active pages for their department
               <div className="space-y-0.5">
                 <div className="pl-2 space-y-0.5">
                   {mainPages.filter(item => {
@@ -198,11 +209,11 @@ const Sidebar: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => setView(item.id)}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group ${
-                        view === item.id ? 'bg-slate-100 text-[#1e293b] font-bold shadow-sm' : 'text-slate-600'
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer transition-colors group ${
+                        view === item.id ? 'bg-[var(--notion-active)] text-[var(--notion-text)] font-bold shadow-sm' : 'text-[var(--notion-text-light)]'
                       }`}
                     >
-                      <item.icon size={14} className={view === item.id ? 'text-[#1e293b]' : 'text-slate-400 group-hover:text-slate-700'} />
+                      <item.icon size={14} className={view === item.id ? 'text-[var(--brand-accent)]' : 'text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]'} />
                       <span className="text-sm text-left truncate">{item.label}</span>
                     </button>
                   ))}
@@ -212,8 +223,37 @@ const Sidebar: React.FC = () => {
           </div>
         </nav>
 
-        {/* Footer / User Profile */}
-        <div className="p-3 border-t border-[#ececeb] space-y-2 bg-[#f7f7f5]">
+        {/* Footer / User Profile & Preferences */}
+        <div className="p-3 border-t border-[var(--notion-border)] space-y-2 bg-[var(--notion-sidebar)]">
+          {/* Theme & Language Toggles */}
+          <div className="flex items-center justify-between px-2 mb-4">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 hover:bg-[var(--notion-hover)] rounded-xl text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-all active:scale-90"
+              title={theme === 'dark' ? t('theme.light') : t('theme.dark')}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            
+            <div className="relative">
+              <button 
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="flex items-center gap-1.5 px-2 py-1 hover:bg-[var(--notion-hover)] rounded-lg text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-all active:scale-95 text-xs font-bold"
+              >
+                <Languages size={16} />
+                <span className="uppercase">{i18n.language.split('-')[0]}</span>
+              </button>
+              
+              {showLangMenu && (
+                <div className="absolute bottom-full mb-2 left-0 w-32 bg-white dark:bg-slate-800 border border-[var(--notion-border)] rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2">
+                  <button onClick={() => changeLanguage('fr')} className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--notion-hover)] text-[var(--notion-text)]">Français</button>
+                  <button onClick={() => changeLanguage('en')} className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--notion-hover)] text-[var(--notion-text)]">English</button>
+                  <button onClick={() => changeLanguage('ar')} className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--notion-hover)] text-[var(--notion-text)]">العربية</button>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors group">
             <div className="relative">
               <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
@@ -222,17 +262,17 @@ const Sidebar: React.FC = () => {
               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
             </div>
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-sm font-semibold text-[#37352f] truncate">{user?.name || 'Utilisateur'}</span>
-              <span className="text-[10px] text-[#9b9a97] truncate uppercase tracking-widest font-bold font-mono">{user?.role || 'Guest'}</span>
+              <span className="text-sm font-semibold text-[var(--notion-text)] truncate">{user?.name || 'Utilisateur'}</span>
+              <span className="text-[10px] text-[var(--notion-text-light)] truncate uppercase tracking-widest font-bold font-mono">{user?.role || 'Guest'}</span>
             </div>
           </div>
           
           <button 
             onClick={() => logout()}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white border border-[#ececeb] hover:bg-[#ffe2dd] hover:text-[#6e3630] hover:border-[#6e3630]/20 rounded-md text-[#37352f] transition-all text-xs font-bold shadow-sm"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--notion-bg)] border border-[var(--notion-border)] hover:bg-[#ffe2dd] hover:text-[#6e3630] hover:border-[#6e3630]/20 rounded-md text-[var(--notion-text)] transition-all text-xs font-bold shadow-sm"
           >
             <LogOut size={14} />
-            Se déconnecter
+            {t('common.logout')}
           </button>
         </div>
       </aside>
@@ -240,7 +280,6 @@ const Sidebar: React.FC = () => {
       {/* Modals */}
       {activeModal === 'search' && <SearchModal projects={projects} onClose={() => setActiveModal(null)} />}
       {activeModal === 'inbox' && <InboxPanel onClose={() => setActiveModal(null)} onNotificationRead={() => {
-         // Refresh notifications when panel closes or a notification is read
          if (token) {
            axios.get(`${API_URL}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } })
              .then(res => setNotifications(res.data));

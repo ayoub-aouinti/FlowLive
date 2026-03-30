@@ -1,0 +1,49 @@
+{
+  "common": {
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "settings": "Settings",
+    "cockpit": "Department Cockpit",
+    "logout": "Logout",
+    "search": "Search",
+    "new": "New",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "dashboard": {
+    "title": "WorkPlan",
+    "subtitle": "Optimize your workflow",
+    "table": "Table",
+    "kanban": "Pipeline",
+    "timeline": "Planning",
+    "calendar": "Calendar",
+    "reporting": "Reporting",
+    "stats": "Stats",
+    "urgencies": "Urgencies"
+  },
+  "project": {
+    "name": "Project Name",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "initiator": "Initiator",
+    "deadline": "Deadline",
+    "product": "Product",
+    "urgent": "Urgent"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "forgot_password": "Forgot Password?"
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode"
+  }
+}

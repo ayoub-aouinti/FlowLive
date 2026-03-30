@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Mail, Lock, User as UserIcon, Loader2, CheckCircle, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Loader2, CheckCircle, ArrowRight, Sun, Moon } from 'lucide-react';
 import logo from '../assets/logo.png';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '../context/ThemeContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export default function PublicSignup() {
+  const { t } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +25,7 @@ export default function PublicSignup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      return setError('Les mots de passe ne correspondent pas');
+      return setError(t('auth.passwords_dont_match'));
     }
     setError(null);
     setLoading(true);
@@ -34,9 +38,9 @@ export default function PublicSignup() {
       setSuccess(true);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || "Erreur lors de l'inscription");
+        setError(err.response?.data?.message || t('auth.signup_error'));
       } else {
-        setError("Erreur lors de l'inscription");
+        setError(t('auth.signup_error'));
       }
       setLoading(false);
     }
@@ -44,21 +48,20 @@ export default function PublicSignup() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center animate-in zoom-in duration-300">
-          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-slate-800" />
+      <div className="min-h-screen flex items-center justify-center bg-[var(--notion-bg)] p-4 transition-colors duration-300">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-md w-full text-center animate-in zoom-in duration-300 border border-[var(--notion-border)]">
+          <div className="w-20 h-20 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-[var(--notion-text)]" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Inscription réussie !</h2>
-          <p className="text-slate-600 mb-8 leading-relaxed">
-            Votre compte <strong>WorkPlan</strong> a été créé. 
-            Vous pouvez maintenant vous connecter sans vérification.
+          <h2 className="text-2xl font-bold text-[var(--notion-text)] mb-4">{t('auth.account_created_title')}</h2>
+          <p className="text-[var(--notion-text-light)] mb-8 leading-relaxed">
+            {t('auth.account_created_desc')}
           </p>
           <button
             onClick={() => navigate('/login')}
-            className="w-full py-4 bg-[#1e293b] text-white rounded-2xl font-bold hover:bg-[#334155] transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+            className="w-full py-4 bg-[var(--brand-primary)] text-white dark:text-slate-900 rounded-2xl font-bold hover:bg-slate-700 dark:hover:bg-slate-200 transition-all flex items-center justify-center gap-2 shadow-lg"
           >
-            Se connecter
+            {t('auth.login')}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -67,23 +70,30 @@ export default function PublicSignup() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-4 font-inter">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-slate-50 animate-in slide-in-from-bottom duration-500">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--notion-bg)] p-4 font-inter transition-colors duration-300">
+      <button 
+        onClick={toggleTheme}
+        className="fixed top-6 right-6 p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-[var(--notion-border)] text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-all"
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
+
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 max-w-md w-full border border-[var(--notion-border)] animate-in slide-in-from-bottom duration-500">
         <div className="text-center mb-8">
           <img src={logo} alt="WorkPlan Logo" className="h-16 w-auto mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-900">Créer un compte</h1>
-          <p className="text-slate-500 mt-2">Rejoignez WorkPlan et commencez à organiser vos projets.</p>
+          <h1 className="text-2xl font-bold text-[var(--notion-text)]">{t('auth.signup')}</h1>
+          <p className="text-[var(--notion-text-light)] mt-2">{t('dashboard.subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nom complet</label>
+            <label className="block text-sm font-semibold text-[var(--notion-text)] mb-1.5">{t('project.initiator')}</label>
             <div className="relative">
-              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--notion-text-light)]" />
               <input
                 type="text"
                 required
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-[#1e293b] outline-none transition-all font-medium"
+                className="w-full pl-12 pr-4 py-3 bg-[var(--notion-sidebar)] dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl focus:bg-white dark:focus:bg-slate-800 text-[var(--notion-text)] outline-none transition-all font-medium"
                 placeholder="Jean Dupont"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -92,13 +102,13 @@ export default function PublicSignup() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+            <label className="block text-sm font-semibold text-[var(--notion-text)] mb-1.5">{t('auth.email')}</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--notion-text-light)]" />
               <input
                 type="email"
                 required
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-[#1e293b] outline-none transition-all font-medium"
+                className="w-full pl-12 pr-4 py-3 bg-[var(--notion-sidebar)] dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl focus:bg-white dark:focus:bg-slate-800 text-[var(--notion-text)] outline-none transition-all font-medium"
                 placeholder="jean@exemple.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -107,14 +117,14 @@ export default function PublicSignup() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mot de passe</label>
+            <label className="block text-sm font-semibold text-[var(--notion-text)] mb-1.5">{t('auth.password')}</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--notion-text-light)]" />
               <input
                 type="password"
                 required
                 minLength={6}
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-[#1e293b] outline-none transition-all font-medium"
+                className="w-full pl-12 pr-4 py-3 bg-[var(--notion-sidebar)] dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl focus:bg-white dark:focus:bg-slate-800 text-[var(--notion-text)] outline-none transition-all font-medium"
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -123,13 +133,13 @@ export default function PublicSignup() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Confirmer le mot de passe</label>
+            <label className="block text-sm font-semibold text-[var(--notion-text)] mb-1.5">{t('auth.confirm_password')}</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--notion-text-light)]" />
               <input
                 type="password"
                 required
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-[#1e293b] outline-none transition-all font-medium"
+                className="w-full pl-12 pr-4 py-3 bg-[var(--notion-sidebar)] dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl focus:bg-white dark:focus:bg-slate-800 text-[var(--notion-text)] outline-none transition-all font-medium"
                 placeholder="••••••••"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -138,7 +148,7 @@ export default function PublicSignup() {
           </div>
 
           {error && (
-            <div className="p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 animate-shake">
+            <div className="p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-200 text-sm rounded-xl border border-red-100 dark:border-red-500/30 animate-shake">
               {error}
             </div>
           )}
@@ -146,19 +156,19 @@ export default function PublicSignup() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-[#1e293b] text-white rounded-2xl font-bold hover:bg-[#334155] shadow-xl shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+            className="w-full py-4 bg-[var(--brand-primary)] text-white dark:text-slate-900 rounded-2xl font-bold hover:bg-slate-700 dark:hover:bg-slate-200 shadow-xl shadow-slate-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              'Créer mon compte'
+              t('auth.signup')
             )}
           </button>
 
-          <p className="text-center text-sm text-slate-500 mt-6">
-            Déjà un compte ?{' '}
-            <Link to="/login" className="text-[#1e293b] font-bold hover:underline">
-              Se connecter
+          <p className="text-center text-sm text-[var(--notion-text-light)] mt-6">
+            {t('auth.have_account') || 'Déjà un compte ?'}{' '}
+            <Link to="/login" className="text-[var(--brand-primary)] font-bold hover:underline">
+              {t('auth.login')}
             </Link>
           </p>
         </form>

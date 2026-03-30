@@ -563,18 +563,94 @@ const createNotification = (userId, title, message, link = null) => {
     console.error('Error creating notification:', err);
   }
 };
-app.post('/api/users', authenticateToken, async (req, res) => {
+app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
-    const users = readLocal('users.json');
-    const newUser = { 
-      ...req.body, 
-      id: 'usr_' + Date.now().toString(),
-      departmentId: req.user.departmentId 
-    };
-    users.push(newUser);
-    writeLocal('users.json', users);
-    res.status(201).json({ id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role });
+    const { emails, role } = req.body; // emails is an array
+    if (!emails || !Array.isArray(emails)) return res.status(400).json({ message: 'Liste d\'emails invalide' });
+
+    const invitations = readLocal('invitations.json');
+    const results = { invited: [], skipped: [] };
+
+    for (const email of emails) {
+      const trimmedEmail = email.trim().toLowerCase();
+      if (!trimmedEmail) continue;
+
+      // Check if already invited or already a user
+      const users = readLocal('users.json');
+      if (users.find(u => u.email === trimmedEmail)) {
+        results.skipped.push({ email: trimmedEmail, reason: 'Utilisateur existe déjà' });
+        continue;
+      }
+      if (invitations.find(i => i.email === trimmedEmail)) {
+        results.skipped.push({ email: trimmedEmail, reason: 'Invitation déjà envoyée' });
+        continue;
+      }
+
+      const token = crypto.randomBytes(32).toString('hex');
+      const invite = {
+        email: trimmedEmail,
+        role: role || 'worker',
+        departmentId: req.user.departmentId,
+        token: token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      };
+      invitations.push(invite);
+      results.invited.push(trimmedEmail);
+
+      // Send Email
+      const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
+      const mailOptions = {
+        from: '"WorkPlan System" <noreply@workplan.com>',
+        to: trimmedEmail,
+        subject: 'Invitation à rejoindre WorkPlan',
+        html: `
+          <div style="font-family: sans-serif; color: #334155; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+            <h1 style="color: #1e293b;">Bienvenue sur WorkPlan</h1>
+            <p>Vous avez été invité par l'administrateur de votre département à rejoindre la plateforme.</p>
+            <p>Cliquez sur le lien ci-dessous pour configurer votre compte (Nom & Mot de passe) :</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${signupLink}" style="padding: 12px 24px; background: #1e293b; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Configurer mon compte</a>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8;">Ce lien expire dans 7 jours.</p>
+          </div>
+        `
+      };
+      transporter.sendMail(mailOptions).catch(err => console.error(`📧 Error sending to ${trimmedEmail}:`, err.message));
+    }
+
+    writeLocal('invitations.json', invitations);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/departments/:id/import-resources', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    const { products, types } = req.body;
+    
+    const departments = readLocal('departments.json');
+    const index = departments.findIndex(d => d.id === req.params.id);
+    if (index === -1) return res.status(404).json({ message: 'Department not found' });
+
+    if (products && Array.isArray(products)) {
+      // Add only unique products
+      const currentProducts = departments[index].products || [];
+      const newProducts = [...new Set([...currentProducts, ...products.map(p => p.trim()).filter(Boolean)])];
+      departments[index].products = newProducts;
+    }
+
+    if (types && Array.isArray(types)) {
+      // Add only unique types
+      const currentTypes = departments[index].types || [];
+      const newTypes = [...new Set([...currentTypes, ...types.map(t => t.trim()).filter(Boolean)])];
+      departments[index].types = newTypes;
+    }
+
+    writeLocal('departments.json', departments);
+    res.json(departments[index]);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -629,7 +705,69 @@ app.get('/api/users', authenticateToken, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+app.get('/api/departments/members-status', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    const users = readLocal('users.json').filter(u => u.departmentId === req.user.departmentId);
+    const invitations = readLocal('invitations.json').filter(i => i.departmentId === req.user.departmentId);
+    
+    // Format response
+    const members = [
+      ...users.map(u => ({ ...u, status: 'Inscrit' })),
+      ...invitations.map(i => ({ ...i, status: 'En attente', name: i.email.split('@')[0], _id: i.token, isInvitation: true }))
+    ];
+    
+    res.json(members);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
+app.put('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    const users = readLocal('users.json');
+    const index = users.findIndex(u => (u._id === req.params.id || u.id === req.params.id) && u.departmentId === req.user.departmentId);
+    
+    if (index === -1) {
+      // Check invitations
+      const invitations = readLocal('invitations.json');
+      const invIndex = invitations.findIndex(i => i.token === req.params.id && i.departmentId === req.user.departmentId);
+      if (invIndex !== -1) {
+        invitations[invIndex] = { ...invitations[invIndex], ...req.body };
+        writeLocal('invitations.json', invitations);
+        return res.json(invitations[invIndex]);
+      }
+      return res.status(404).json({ message: 'User or invitation not found' });
+    }
+
+    users[index] = { ...users[index], ...req.body };
+    writeLocal('users.json', users);
+    res.json(users[index]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    
+    // Remove from users
+    let users = readLocal('users.json');
+    users = users.filter(u => !((u._id === req.params.id || u.id === req.params.id) && u.departmentId === req.user.departmentId));
+    writeLocal('users.json', users);
+    
+    // Remove from invitations
+    let invitations = readLocal('invitations.json');
+    invitations = invitations.filter(i => !(i.token === req.params.id && i.departmentId === req.user.departmentId));
+    writeLocal('invitations.json', invitations);
+    
+    res.json({ message: 'Deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Socket.io connection handling
 io.on('connection', (socket) => {

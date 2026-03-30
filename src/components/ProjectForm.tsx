@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../services/socket';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import type { User } from '../types';
@@ -38,7 +38,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
   const { user, token } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [config, setConfig] = useState<DeptConfig>({ products: [], types: [] });
-  // Generic fieldValues keyed by formField.id
   const [fieldValues, setFieldValues] = useState<Record<string, string | boolean>>({});
   const [projectName, setProjectName] = useState('');
 
@@ -81,7 +80,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
     e.preventDefault();
     if (!user || !projectName) return;
 
-    // Build submission payload mapping known field IDs to historical keys for backend compatibility
     const payload: Record<string, unknown> = { 
       name: projectName, 
       initiatorName: user.name,
@@ -96,10 +94,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
       else if (f.type === 'date') payload['deadline'] = val;
       else if (f.type === 'select' && f.id === 'f_priority') payload['priority'] = val;
       else if (f.type === 'checkbox' && f.id === 'f_urgent') payload['urgent'] = val;
-      else payload[f.id] = val; // custom fields stored as-is
+      else payload[f.id] = val;
     });
 
-    // Store all field values for flexible table display
     payload['_customFields'] = Object.fromEntries(
       fields.map(f => [f.id, getFieldValue(f)])
     );
@@ -108,15 +105,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
     setProjectName('');
     setFieldValues({});
     if (onClose) onClose();
-    alert('Projet soumis avec succès !');
+    // Use a custom event or toast instead of alert for premium feel
+    window.dispatchEvent(new CustomEvent('project_submitted'));
   };
 
   const renderField = (field: FormField) => {
-    const baseClass = "px-2 py-1 text-sm text-[#37352f] hover:bg-[#efefed] rounded border-none outline-none focus:ring-0 transition-colors bg-transparent appearance-none cursor-pointer font-medium w-full";
+    const baseClass = "px-2.5 py-1.5 text-sm text-[var(--notion-text)] hover:bg-[var(--notion-hover)] rounded-lg transition-all bg-transparent outline-none focus:bg-[var(--notion-hover)] appearance-none cursor-pointer font-bold w-full border border-transparent focus:border-[var(--brand-accent)]/20";
 
     if (field.type === 'text' && field.id === 'f_initiator') {
       return (
-        <div className="px-2 py-1 text-sm text-[#37352f] font-medium bg-[#efefed] rounded w-fit">
+        <div className="px-3 py-1 text-xs text-[var(--brand-accent)] font-black bg-[var(--brand-accent)]/10 rounded-lg w-fit border border-[var(--brand-accent)]/20 uppercase tracking-widest">
           {user?.name}
         </div>
       );
@@ -150,10 +148,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
 
     if (field.type === 'checkbox') {
       return (
-        <div className="flex items-center px-2">
+        <div className="flex items-center px-2.5">
           <input
             type="checkbox"
-            className="w-4 h-4 text-blue-600 border-[#ececeb] rounded focus:ring-0 cursor-pointer"
+            className="w-4 h-4 text-[var(--brand-accent)] border-[var(--notion-border)] rounded-md focus:ring-0 cursor-pointer bg-[var(--notion-sidebar)]"
             checked={(getFieldValue(field) as boolean)}
             onChange={e => setFieldValue(field.id, e.target.checked)}
           />
@@ -161,41 +159,43 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
       );
     }
 
-    if (field.type === 'user') {
+    if (field.type === 'user' || field.type === 'product' || field.type === 'projectType' || field.type === 'select') {
       return (
-        <select required={field.required} value={(getFieldValue(field) as string)} onChange={e => setFieldValue(field.id, e.target.value)} className={baseClass}>
-          <option value="">Sélectionner...</option>
-          {users.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
-        </select>
-      );
-    }
-
-    if (field.type === 'product') {
-      return (
-        <select value={(getFieldValue(field) as string)} onChange={e => setFieldValue(field.id, e.target.value)} className={baseClass}>
-          {config.products?.map(p => <option key={p} value={p}>{p}</option>)}
-          {(!config.products?.length) && <option value="">Aucun produit</option>}
-        </select>
-      );
-    }
-
-    if (field.type === 'projectType') {
-      return (
-        <select value={(getFieldValue(field) as string)} onChange={e => setFieldValue(field.id, e.target.value)} className={baseClass}>
-          {config.types?.map(t => <option key={t} value={t}>{t}</option>)}
-          {(!config.types?.length) && <option value="">Aucun type</option>}
-        </select>
-      );
-    }
-
-    if (field.type === 'select') {
-      // Default select = Priorité
-      return (
-        <select value={(getFieldValue(field) as string)} onChange={e => setFieldValue(field.id, e.target.value)} className={baseClass}>
-          <option value="Basse">Basse</option>
-          <option value="Moyenne">Moyenne</option>
-          <option value="Haute">Haute</option>
-        </select>
+        <div className="relative w-full group">
+          <select 
+            required={field.required} 
+            value={(getFieldValue(field) as string)} 
+            onChange={e => setFieldValue(field.id, e.target.value)} 
+            className={baseClass}
+          >
+            {field.type === 'user' && (
+              <>
+                <option value="">Sélectionner...</option>
+                {users.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
+              </>
+            )}
+            {field.type === 'product' && (
+              <>
+                {config.products?.map(p => <option key={p} value={p}>{p}</option>)}
+                {(!config.products?.length) && <option value="">Aucun produit</option>}
+              </>
+            )}
+            {field.type === 'projectType' && (
+              <>
+                {config.types?.map(t => <option key={t} value={t}>{t}</option>)}
+                {(!config.types?.length) && <option value="">Aucun type</option>}
+              </>
+            )}
+            {field.type === 'select' && (
+              <>
+                <option value="Basse">Basse</option>
+                <option value="Moyenne">Moyenne</option>
+                <option value="Haute">Haute</option>
+              </>
+            )}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--notion-text-light)] opacity-40 group-hover:opacity-100 transition-opacity" />
+        </div>
       );
     }
 
@@ -203,50 +203,56 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-[#ececeb]">
-        <h2 className="text-lg font-bold text-[#37352f]">Démarrer un nouveau projet</h2>
+    <div className="bg-[var(--notion-bg)] h-full flex flex-col overflow-hidden transition-colors duration-300">
+      <div className="flex items-center justify-between p-6 border-b border-[var(--notion-border)]">
+        <h2 className="text-xl font-black text-[var(--notion-text)] tracking-tight">Démarrer un nouveau projet</h2>
         {onClose && (
-          <button onClick={onClose} className="p-1 hover:bg-[#efefed] rounded transition-colors text-[#9b9a97]">
+          <button onClick={onClose} className="p-2 hover:bg-[var(--notion-hover)] rounded-xl transition-all text-[var(--notion-text-light)] active:scale-90">
             <X size={20} />
           </button>
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 max-w-2xl mx-auto w-full">
-        <div className="space-y-2">
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 lg:p-12 space-y-10 max-w-2xl mx-auto w-full scrollbar-hide">
+        <div className="space-y-4">
           <input
             type="text"
-            className="w-full text-4xl font-bold placeholder-[#dfdfde] border-none outline-none focus:ring-0 p-0 text-[#37352f]"
+            className="w-full text-5xl font-black placeholder-[var(--notion-text-light)]/20 border-none outline-none focus:ring-0 p-0 text-[var(--notion-text)] bg-transparent tracking-tight"
             placeholder="Nom du projet..."
             value={projectName}
             onChange={e => setProjectName(e.target.value)}
             required
+            autoFocus
           />
+          <div className="h-1 w-20 bg-[var(--brand-accent)] rounded-full opacity-50" />
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-2">
           {fields.map(field => (
-            <div key={field.id} className="grid grid-cols-[160px_1fr] items-center py-1 group/row">
-              <div className="flex items-center gap-2 text-[#9b9a97] text-sm">
-                <AlertCircle size={14} className="opacity-60" />
+            <div key={field.id} className="grid grid-cols-[180px_1fr] items-center py-2 group/row hover:bg-[var(--notion-hover)]/30 rounded-xl px-2 -mx-2 transition-colors">
+              <div className="flex items-center gap-2.5 text-[var(--notion-text-light)] text-sm font-bold opacity-60 group-hover/row:opacity-100 transition-all">
+                <AlertCircle size={14} />
                 <span>{field.label}</span>
-                {field.required && <span className="text-red-400 text-xs">*</span>}
+                {field.required && <span className="text-[var(--brand-accent)] text-xs">*</span>}
               </div>
-              {renderField(field)}
+              <div className="flex-1">
+                {renderField(field)}
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="h-px bg-[#ececeb] my-4" />
-
-        <div className="pt-8">
+        <div className="pt-10 border-t border-[var(--notion-border)] border-dashed">
           <button
             type="submit"
-            className="bg-[#2383e2] hover:bg-[#0070f3] text-white font-semibold py-1.5 px-4 rounded text-sm transition-all shadow-sm"
+            className="w-full bg-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/90 text-white font-black py-4 px-8 rounded-2xl transition-all shadow-xl shadow-[var(--brand-accent)]/20 active:scale-95 uppercase tracking-widest text-sm flex items-center justify-center gap-3"
           >
             Créer la page du projet
+            <X className="rotate-45" size={18} />
           </button>
+          <p className="text-center text-[var(--notion-text-light)] text-[10px] mt-6 font-bold uppercase tracking-widest opacity-40">
+            Appuyez sur entrée pour valider rapidement
+          </p>
         </div>
       </form>
     </div>
