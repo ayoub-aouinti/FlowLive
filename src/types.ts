@@ -4,6 +4,7 @@ export interface User {
   role?: string;
   email?: string;
   departmentId?: string | null;
+  isVerified?: boolean;
 }
 
 export interface Department {
@@ -12,6 +13,9 @@ export interface Department {
   adminId: string;
   products: string[];
   types: string[];
+  activePages?: string[];
+  coverUrl?: string | null;
+  logoUrl?: string | null;
 }
 
 export interface FormField {

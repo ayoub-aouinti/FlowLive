@@ -1,0 +1,37 @@
+[
+  {
+    "email": "ayoubaouinti1990@gmail.com",
+    "role": "admin",
+    "departmentId": "dept_1774828466796",
+    "token": "ec08770a41c25201ffed68f1a4b11e20e7664e3ca663a59d463066debc401ffd",
+    "expiresAt": "2026-04-05T23:54:26.797Z"
+  },
+  {
+    "email": "ayoubaouinti1990@gmail.com",
+    "role": "admin",
+    "departmentId": "dept_1774828628215",
+    "token": "1333a7753394532960cd88a86e2c4f4843b4b61fc5c05852ff8ca4320bc7c5cf",
+    "expiresAt": "2026-04-05T23:57:08.216Z"
+  },
+  {
+    "email": "ayoubaouinti1990@gmail.com",
+    "role": "admin",
+    "departmentId": "dept_1774828969213",
+    "token": "4d0644eee4eff8787e8c794b883e25e267b26c91ea43dd349fdd254bbb976ac9",
+    "expiresAt": "2026-04-06T00:02:49.214Z"
+  },
+  {
+    "email": "ayoubaouinti1990@gmail.com",
+    "role": "admin",
+    "departmentId": "dept_1774829002951",
+    "token": "64832ed7690950d37100aef1cc6fb2a6f4e19df5ac6efd00e70728ec2b88d356",
+    "expiresAt": "2026-04-06T00:03:22.952Z"
+  },
+  {
+    "email": "ayoubaouinti1990@gmail.com",
+    "role": "admin",
+    "departmentId": "dept_1774829312758",
+    "token": "a17ee0200eff97ad4fdd9791cf0b1787b6768e4967b03ae2c45ec9c97b97bcc0",
+    "expiresAt": "2026-04-06T00:08:32.759Z"
+  }
+]

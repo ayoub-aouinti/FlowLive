@@ -97,12 +97,15 @@ async function migrate() {
     const projectsJson = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'projects.json'), 'utf8'));
     await Project.deleteMany({});
     
-    const preparedProjects = projectsJson.map(p => ({
-      ...p,
-      assignedTo: userMapping[p.assignedTo] || null,
-      deadline: new Date(p.deadline),
-      createdAt: new Date(p.createdAt)
-    }));
+    const preparedProjects = projectsJson.map(p => {
+      const { _id, id, ...rest } = p;
+      return {
+        ...rest,
+        assignedTo: userMapping[p.assignedTo] || null,
+        deadline: new Date(p.deadline),
+        createdAt: new Date(p.createdAt)
+      };
+    });
     await Project.insertMany(preparedProjects);
     console.log(`✅ ${projectsJson.length} projects migrated.`);
 
@@ -110,11 +113,14 @@ async function migrate() {
     console.log('🔔 Migrating Notifications...');
     const notifsJson = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'notifications.json'), 'utf8'));
     await Notif.deleteMany({});
-    const preparedNotifs = notifsJson.map(n => ({
-      ...n,
-      userId: userMapping[n.userId] ? userMapping[n.userId].toString() : n.userId,
-      createdAt: new Date(n.createdAt)
-    }));
+    const preparedNotifs = notifsJson.map(n => {
+      const { _id, id, ...rest } = n;
+      return {
+        ...rest,
+        userId: userMapping[n.userId] ? userMapping[n.userId].toString() : n.userId,
+        createdAt: new Date(n.createdAt)
+      };
+    });
     await Notif.insertMany(preparedNotifs);
     console.log(`✅ ${notifsJson.length} notifications migrated.`);
 

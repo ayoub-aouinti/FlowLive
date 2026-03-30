@@ -2,13 +2,15 @@
 
 :root {
   --notion-bg: #ffffff;
-  --notion-sidebar: #fbfbfa;
-  --notion-border: #ececeb;
-  --notion-text: #37352f;
-  --notion-text-light: #9b9a97;
-  --notion-hover: #efefed;
-  --brand-blue: #1a4f8b;
-  --brand-green: #8cc63f;
+  --notion-sidebar: #f8fafc; /* Slate-50 */
+  --notion-border: #e2e8f0; /* Slate-200 */
+  --notion-text: #0f172a; /* Slate-900 */
+  --notion-text-light: #64748b; /* Slate-500 */
+  --notion-hover: #f1f5f9; /* Slate-100 */
+  --brand-primary: #1e293b; /* Slate-800 - Matching Logo Dark */
+  --brand-secondary: #475569; /* Slate-600 - Matching Logo Steel */
+  --brand-accent: #2563eb; /* Modern Blue */
+  --brand-accent-hover: #1d4ed8;
 }
 
 body {

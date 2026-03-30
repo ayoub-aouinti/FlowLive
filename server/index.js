@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const User = require('./models/User'); 
 const fs = require('fs');
 const path = require('path');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const USE_LOCAL_DB = process.env.USE_LOCAL_DB === 'true';
@@ -29,20 +31,30 @@ const io = new Server(server, {
 app.use(cors({
   origin: process.env.FRONTEND_URL || "*"
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // MongoDB Connection (Skip if local)
+let transporter;
 if (!USE_LOCAL_DB) {
   const mongoOptions = {
-    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30k
+    serverSelectionTimeoutMS: 5000, 
   };
 
   mongoose.connect(process.env.MONGODB_URI, mongoOptions)
     .then(() => console.log('✅ Connected to MongoDB Atlas'))
     .catch(err => console.error('❌ MongoDB connection error:', err));
-} else {
-  console.log('📂 Running in LOCAL JSON DATABASE mode');
 }
+
+transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+  port: process.env.EMAIL_PORT || 587,
+  secure: false, 
+  auth: {
+    user: process.env.EMAIL_USER || 'placeholder@ethereal.email',
+    pass: process.env.EMAIL_PASS || 'placeholder'
+  }
+});
 
 let Project;
 if (!USE_LOCAL_DB) {
@@ -105,19 +117,6 @@ const authorizeRole = (roles) => {
 };
 
 // AUTH ROUTES
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-    const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: 'User already exists' });
-
-    const user = new User({ name, email, password, role });
-    await user.save();
-    res.status(201).json({ message: 'User created' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -126,9 +125,18 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (USE_LOCAL_DB) {
       const users = readLocal('users.json');
-      user = users.find(u => u.email === email && u.password === password);
-      if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-      user.id = user.id || Date.now().toString(); // Use a temp id if missing
+      const foundUser = users.find(u => u.email === email);
+      if (!foundUser) return res.status(400).json({ message: 'Invalid credentials' });
+      
+      const isMatch = await bcrypt.compare(password, foundUser.password);
+      if (!isMatch) {
+         // Fallback for non-hashed legacy passwords (like "password123")
+         if (password !== foundUser.password) {
+           return res.status(400).json({ message: 'Invalid credentials' });
+         }
+      }
+      user = foundUser;
+      user.id = user.id || Date.now().toString(); 
     } else {
       user = await User.findOne({ email });
       if (!user || !(await user.comparePassword(password))) {
@@ -174,11 +182,233 @@ app.post('/api/departments', authenticateToken, async (req, res) => {
        activePages: req.body.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
        pageConfigs: {}
     };
+    // Check if admin user exists, if not send invitation
+    const users = readLocal('users.json');
+    const existingUser = users.find(u => u.email === newDept.adminId);
+    
+    if (!existingUser) {
+      console.log(`👤 Creating invitation for new admin: ${newDept.adminId}`);
+      const token = crypto.randomBytes(32).toString('hex');
+      const invitations = readLocal('invitations.json');
+      invitations.push({
+        email: newDept.adminId,
+        role: 'admin',
+        departmentId: newDept.id,
+        token: token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      });
+      writeLocal('invitations.json', invitations);
+
+      const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
+      
+      const mailOptions = {
+        from: '"WorkPlan System" <noreply@workplan.com>',
+        to: newDept.adminId,
+        subject: 'Invitation à rejoindre WorkPlan',
+        html: `
+          <h1>Bienvenue sur WorkPlan</h1>
+          <p>Vous avez été invité à gérer le département <b>${newDept.name}</b>.</p>
+          <p>Cliquez sur le lien ci-dessous pour configurer votre compte :</p>
+          <a href="${signupLink}" style="padding: 10px 20px; background: #1a4f8b; color: white; text-decoration: none; border-radius: 5px;">Configurer mon compte</a>
+        `
+      };
+
+      transporter.sendMail(mailOptions).catch(err => {
+        console.error('📧 Error sending email:', err.message);
+        console.log('🔗 Signup Link (Manual):', signupLink);
+      });
+    } else {
+      // Upgrade existing user to Admin for this department
+      const userIndex = users.findIndex(u => u.email === newDept.adminId);
+      if (userIndex !== -1) {
+        users[userIndex].role = 'admin';
+        users[userIndex].departmentId = newDept.id;
+        writeLocal('users.json', users);
+        console.log(`✅ Existing user ${newDept.adminId} upgraded to Admin`);
+      }
+    }
+
     departments.push(newDept);
     writeLocal('departments.json', departments);
     res.status(201).json(newDept);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/departments/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    const { id } = req.params;
+    const { name, adminId, activePages } = req.body;
+    
+    let departments = readLocal('departments.json');
+    const deptIndex = departments.findIndex(d => d.id === id);
+    if (deptIndex === -1) return res.status(404).json({ message: 'Department not found' });
+
+    const oldAdminId = departments[deptIndex].adminId;
+    
+    // Update basic info
+    departments[deptIndex].name = name || departments[deptIndex].name;
+    departments[deptIndex].activePages = activePages || departments[deptIndex].activePages;
+    
+    // Handle Admin change if provided
+    if (adminId && adminId !== oldAdminId) {
+      departments[deptIndex].adminId = adminId;
+      
+      const users = readLocal('users.json');
+      const newAdmin = users.find(u => u.email === adminId);
+      
+      if (newAdmin) {
+        // Upgrade existing user to admin for this dept
+        const userIdx = users.findIndex(u => u.email === adminId);
+        users[userIdx].role = 'admin';
+        users[userIdx].departmentId = id;
+        writeLocal('users.json', users);
+        console.log(`✅ User ${adminId} upgraded to Admin via Edit`);
+      } else {
+        // Create invitation for new email
+        console.log(`👤 Creating invitation for new admin (Edit): ${adminId}`);
+        const token = crypto.randomBytes(32).toString('hex');
+        const invitations = readLocal('invitations.json');
+        invitations.push({
+          email: adminId,
+          role: 'admin',
+          departmentId: id,
+          token: token,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+        writeLocal('invitations.json', invitations);
+
+        const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
+        const mailOptions = {
+          from: '"WorkPlan System" <noreply@workplan.com>',
+          to: adminId,
+          subject: 'Invitation à gérer un département sur WorkPlan',
+          html: `<h1>Bienvenue sur WorkPlan</h1><p>Vous avez été désigné administrateur pour <b>${name}</b>.</p><a href="${signupLink}">Configurer mon compte</a>`
+        };
+        transporter.sendMail(mailOptions).catch(e => console.error('📧 Email Error:', e.message));
+      }
+    }
+
+    writeLocal('departments.json', departments);
+    res.json(departments[deptIndex]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete('/api/departments/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    let departments = readLocal('departments.json');
+    departments = departments.filter(d => d.id !== req.params.id);
+    writeLocal('departments.json', departments);
+    res.json({ message: 'Department deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// INVITATION COMPLETION
+app.get('/api/invitations/verify/:token', async (req, res) => {
+  try {
+    const invitations = readLocal('invitations.json');
+    const invite = invitations.find(i => i.token === req.params.token);
+    
+    if (!invite) return res.status(404).json({ message: 'Lien invalide ou expiré' });
+    if (new Date(invite.expiresAt) < new Date()) {
+      return res.status(400).json({ message: 'Invitation expirée' });
+    }
+    
+    res.json({ email: invite.email, role: invite.role });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/auth/complete-signup', async (req, res) => {
+  try {
+    const { token, password, name } = req.body;
+    let invitations = readLocal('invitations.json');
+    const index = invitations.findIndex(i => i.token === token);
+    
+    if (index === -1) return res.status(404).json({ message: 'Invitation non trouvée' });
+    const invite = invitations[index];
+
+    const users = readLocal('users.json');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const newUser = {
+      id: `user_${Date.now()}`,
+      name: name,
+      email: invite.email,
+      password: hashedPassword,
+      role: invite.role,
+      departmentId: invite.departmentId,
+      createdAt: new Date()
+    };
+    
+    users.push(newUser);
+    writeLocal('users.json', users);
+
+    // Remove invitation
+    invitations.splice(index, 1);
+    writeLocal('invitations.json', invitations);
+
+    res.json({ message: 'Compte créé avec succès !' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUBLIC SIGNUP & VERIFICATION
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    const users = readLocal('users.json');
+    
+    if (users.find(u => u.email === email)) {
+      return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    
+    const newUser = {
+      id: `user_${Date.now()}`,
+      name,
+      email,
+      password: hashedPassword,
+      role: 'worker', // Default role for public signup
+      isVerified: true,
+      createdAt: new Date()
+    };
+    
+    users.push(newUser);
+    writeLocal('users.json', users);
+
+    res.status(201).json({ message: 'Inscription réussie ! Vous pouvez maintenant vous connecter.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get('/api/auth/verify-email/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    let users = readLocal('users.json');
+    const index = users.findIndex(u => u.verificationToken === token);
+    
+    if (index === -1) return res.status(404).json({ message: 'Lien de vérification invalide ou expiré' });
+    
+    users[index].isVerified = true;
+    delete users[index].verificationToken;
+    writeLocal('users.json', users);
+
+    res.json({ message: 'Email vérifié avec succès ! Vous pouvez maintenant vous connecter.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -202,6 +432,8 @@ app.put('/api/departments/:id/config', authenticateToken, async (req, res) => {
     if (req.body.types) departments[index].types = req.body.types;
     if (req.body.pageConfigs) departments[index].pageConfigs = req.body.pageConfigs;
     if (req.body.formFields) departments[index].formFields = req.body.formFields;
+    if (req.body.coverUrl !== undefined) departments[index].coverUrl = req.body.coverUrl;
+    if (req.body.logoUrl !== undefined) departments[index].logoUrl = req.body.logoUrl;
     
     writeLocal('departments.json', departments);
     res.json(departments[index]);
@@ -232,7 +464,9 @@ app.get('/api/departments/my-config', authenticateToken, async (req, res) => {
        types: dept.types || [],
        activePages: dept.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
        pageConfigs: dept.pageConfigs || {},
-       formFields: dept.formFields || null
+       formFields: dept.formFields || null,
+       coverUrl: dept.coverUrl || null,
+       logoUrl: dept.logoUrl || null
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

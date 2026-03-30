@@ -55,6 +55,8 @@ const Dashboard: React.FC = () => {
     activePages: string[];
     pageConfigs: Record<string, any>;
     formFields: FormField[] | null;
+    coverUrl?: string | null;
+    logoUrl?: string | null;
   } | null>(null);
   const { token } = useAuth();
 
@@ -81,9 +83,13 @@ const Dashboard: React.FC = () => {
       setProjects((prev) => [...prev, newProject].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()));
     });
 
+    const handleConfigUpdate = () => fetchData();
+    window.addEventListener('dept_config_updated', handleConfigUpdate);
+
     return () => { 
       socket.off('project_added'); 
       socket.off('project_updated');
+      window.removeEventListener('dept_config_updated', handleConfigUpdate);
     };
   }, [token, selectedDepartmentId]);
 
@@ -109,13 +115,17 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-4 mb-8 pt-4">
-        <img src={logo} alt="FlowLive" className="w-14 h-14 rounded-2xl object-contain shadow-sm border border-[#ececeb] p-1 bg-white" />
+        {deptConfig?.logoUrl ? (
+          <img src={deptConfig.logoUrl} alt={deptConfig.departmentName} className="w-14 h-14 rounded-2xl object-contain shadow-[0_4px_12px_rgba(30,41,59,0.1)] border border-slate-100 p-1 bg-white" />
+        ) : (
+          <img src={logo} alt="WorkPlan" className="w-14 h-14 rounded-2xl object-contain shadow-[0_4px_12px_rgba(30,41,59,0.1)] border border-slate-100 p-1 bg-white" />
+        )}
         <div>
-          <h1 className="text-[40px] font-bold text-[#1a4f8b] leading-tight flex items-center gap-2">
-            Flow<span className="text-[#8cc63f]">Live</span>
+          <h1 className="text-[40px] font-bold text-[#1e293b] leading-tight flex items-center gap-2">
+            Work<span className="text-[#64748b] font-light italic">Plan</span>
           </h1>
-          <p className="text-[#9b9a97] text-lg font-medium -mt-1 tracking-tight capitalize">
-            {deptConfig?.departmentName || 'Planning Département Digital'}
+          <p className="text-slate-400 text-lg font-medium -mt-1 tracking-tight capitalize">
+            {deptConfig?.departmentName || 'Planiiing Département Digital'}
           </p>
         </div>
       </div>
@@ -124,7 +134,7 @@ const Dashboard: React.FC = () => {
         {isPageActive('table') && (
           <button 
             onClick={() => setView('table')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[#1e293b] text-[#1e293b] font-bold shadow-[0_1px_0_0_#1e293b]' : 'border-transparent text-slate-400 hover:bg-slate-50'}`}
           >
             <TableIcon size={14} />
             Table
@@ -134,7 +144,7 @@ const Dashboard: React.FC = () => {
         {isPageActive('kanban') && (
           <button 
             onClick={() => setView('kanban')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[#1e293b] text-[#1e293b] font-bold shadow-[0_1px_0_0_#1e293b]' : 'border-transparent text-slate-400 hover:bg-slate-50'}`}
           >
             <Columns size={14} />
             Pipeline - Demandes et pr...
@@ -144,7 +154,7 @@ const Dashboard: React.FC = () => {
         {isPageActive('timeline') && (
           <button 
             onClick={() => setView('timeline')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[#1a4f8b] text-[#1a4f8b] font-medium' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[#1e293b] text-[#1e293b] font-bold shadow-[0_1px_0_0_#1e293b]' : 'border-transparent text-slate-400 hover:bg-slate-50'}`}
           >
             <CalendarIcon size={14} />
             Planning - Equipe digitale
@@ -155,7 +165,7 @@ const Dashboard: React.FC = () => {
           <button 
             onClick={() => setView('calendrier')}
             className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'calendrier' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+              view === 'calendrier' ? 'border-[#1e293b] text-[#1e293b] font-bold shadow-[0_1px_0_0_#1e293b]' : 'border-transparent text-slate-400 hover:bg-slate-50'
             }`}
           >
             <CalendarIcon size={14} />
@@ -167,7 +177,7 @@ const Dashboard: React.FC = () => {
           <button 
             onClick={() => setView('reporting')}
             className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'reporting' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+              view === 'reporting' ? 'border-[#1e293b] text-[#1e293b] font-bold shadow-[0_1px_0_0_#1e293b]' : 'border-transparent text-slate-400 hover:bg-slate-50'
             }`}
           >
             <BarChart2 size={14} />
@@ -179,10 +189,10 @@ const Dashboard: React.FC = () => {
           <button 
             onClick={() => setView('urgences')}
             className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'urgences' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+              view === 'urgences' ? 'border-[#1e293b] text-[#1e293b] font-bold shadow-[0_1px_0_0_#1e293b]' : 'border-transparent text-slate-400 hover:bg-slate-50'
             }`}
           >
-            <AlertCircle size={14} className="text-[#eb5757]" />
+            <AlertCircle size={14} className="text-[#e11d48]" />
             Urgences
           </button>
         )}
@@ -191,7 +201,7 @@ const Dashboard: React.FC = () => {
           <button 
             onClick={() => setView('stats')}
             className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'stats' ? 'border-[#1a4f8b] text-[#1a4f8b]' : 'border-transparent text-[#9b9a97] hover:bg-[#efefed]'
+              view === 'stats' ? 'border-[#1e293b] text-[#1e293b] font-bold shadow-[0_1px_0_0_#1e293b]' : 'border-transparent text-slate-400 hover:bg-slate-50'
             }`}
           >
             <PieChart size={14} />
@@ -202,14 +212,14 @@ const Dashboard: React.FC = () => {
         <div className="flex-1" />
         
         <div className="flex items-center gap-2 pr-2">
-          <button className="p-1.5 hover:bg-[#efefed] rounded transition-colors text-[#9b9a97]"><Search size={16} /></button>
-          <button className="p-1.5 hover:bg-[#efefed] rounded transition-colors text-[#9b9a97]"><Filter size={16} /></button>
-          <button className="p-1.5 hover:bg-[#efefed] rounded transition-colors text-[#9b9a97]"><ArrowUpDown size={16} /></button>
+          <button className="p-1.5 hover:bg-slate-50 rounded transition-colors text-slate-400"><Search size={16} /></button>
+          <button className="p-1.5 hover:bg-slate-50 rounded transition-colors text-slate-400"><Filter size={16} /></button>
+          <button className="p-1.5 hover:bg-slate-50 rounded transition-colors text-slate-400"><ArrowUpDown size={16} /></button>
           
           {token && JSON.parse(atob(token.split('.')[1])).role === 'initiateur' && (
             <button 
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1 bg-[#1a4f8b] hover:bg-[#154070] text-white text-xs font-bold px-3 py-1.5 rounded transition-all shadow-md active:scale-95"
+              className="flex items-center gap-1 bg-[#1e293b] hover:bg-[#334155] text-white text-xs font-bold px-3 py-1.5 rounded transition-all shadow-md active:scale-95"
             >
               Nouveau
               <Plus size={14} />

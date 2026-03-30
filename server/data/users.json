@@ -1,7 +1,49 @@
 [
-  {"id": "super_1", "name": "Super Admin", "email": "super@flow.com", "password": "password123", "role": "superadmin", "departmentId": null},
-  {"id": "admin_1", "name": "Admin User", "email": "admin@flow.com", "password": "password123", "role": "admin", "departmentId": "dept_1"},
-  {"id": "user_1", "name": "Standard User", "email": "user@flow.com", "password": "password123", "role": "worker", "departmentId": "dept_1"},
-  {"id": "init_1", "name": "Initiateur Test", "email": "init@flow.com", "password": "password123", "role": "initiateur", "departmentId": "dept_1"}
+  {
+    "id": "super_1",
+    "name": "Super Admin",
+    "email": "super@flow.com",
+    "password": "password123",
+    "role": "superadmin",
+    "departmentId": null,
+    "isVerified": true
+  },
+  {
+    "id": "admin_1",
+    "name": "Admin User",
+    "email": "admin@flow.com",
+    "password": "password123",
+    "role": "admin",
+    "departmentId": "dept_1",
+    "isVerified": true
+  },
+  {
+    "id": "user_1",
+    "name": "Standard User",
+    "email": "user@flow.com",
+    "password": "password123",
+    "role": "worker",
+    "departmentId": "dept_1",
+    "isVerified": true
+  },
+  {
+    "id": "init_1",
+    "name": "Initiateur Test",
+    "email": "init@flow.com",
+    "password": "password123",
+    "role": "initiateur",
+    "departmentId": "dept_1",
+    "isVerified": true
+  },
+  {
+    "id": "user_1774830171082",
+    "name": "Ayoub Aouinti",
+    "email": "ayoubaouinti1990@gmail.com",
+    "password": "$2b$10$NgXyYln/Hqx6NHcJvJlkAOeKCul3EIS4JT6g8iqwelxj/Nm.pI44O",
+    "role": "admin",
+    "isVerified": false,
+    "verificationToken": "6fb2e2761657e87936d9f3505ee24d8e7d21464e516dccd603e274ed2e10d104",
+    "createdAt": "2026-03-30T00:22:51.082Z",
+    "departmentId": "dept_1774831227988"
+  }
 ]
-
