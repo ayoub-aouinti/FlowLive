@@ -28,8 +28,21 @@ const io = new Server(server, {
   }
 });
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://department-manage.netlify.app',
+  'http://localhost:5173'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "*"
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -38,12 +51,17 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 let transporter;
 if (!USE_LOCAL_DB) {
   const mongoOptions = {
-    serverSelectionTimeoutMS: 5000, 
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 10000,
   };
 
+  console.log('📡 Connecting to MongoDB Atlas...');
   mongoose.connect(process.env.MONGODB_URI, mongoOptions)
     .then(() => console.log('✅ Connected to MongoDB Atlas'))
-    .catch(err => console.error('❌ MongoDB connection error:', err));
+    .catch(err => {
+      console.error('❌ MongoDB connection error:', err.message);
+      console.log('💡 Tip: Check your MONGODB_URI and Network Access (Whitelist 0.0.0.0/0)');
+    });
 }
 
 transporter = nodemailer.createTransport({

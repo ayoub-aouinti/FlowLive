@@ -32,8 +32,12 @@ export default function PublicSignup() {
         password: formData.password
       });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Erreur lors de l'inscription");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Erreur lors de l'inscription");
+      } else {
+        setError("Erreur lors de l'inscription");
+      }
       setLoading(false);
     }
   };
