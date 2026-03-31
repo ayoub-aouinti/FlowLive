@@ -19,7 +19,7 @@ import { useNavigation } from '../context/useNavigation';
 import { useTheme } from '../context/ThemeContext';
 import type { Project, User, FormField } from '../types';
 import ProjectForm from './ProjectForm';
-import logo from '../assets/logo.png';
+const logo = '/logo.png';
 import CalendarView from './views/CalendarView';
 import ReportingView from './views/ReportingView';
 import StatsView from './views/StatsView';
@@ -134,14 +134,11 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-1 transition-colors duration-300">
       <div className="flex items-center gap-4 mb-8 pt-4">
-        {deptConfig?.logoUrl ? (
-          <img src={deptConfig.logoUrl} alt={deptConfig.departmentName} className="w-14 h-14 rounded-2xl object-contain shadow-[0_4px_12px_rgba(30,41,59,0.1)] border border-[var(--notion-border)] p-1 bg-white dark:bg-slate-800" />
-        ) : (
-          <img src={logo} alt="WorkPlan" className="w-14 h-14 rounded-2xl object-contain shadow-[0_4px_12px_rgba(30,41,59,0.1)] border border-[var(--notion-border)] p-1 bg-white dark:bg-slate-800" />
-        )}
+        <img src="/logo.png" alt="WorkPlan" className="w-16 h-16 rounded-2xl object-contain shadow-lg border border-[var(--notion-border)] p-1 bg-white dark:bg-slate-800" />
         <div>
-          <h1 className="text-[40px] font-bold text-[var(--notion-text)] leading-tight flex items-center gap-2">
-            Work<span className="text-[var(--notion-text-light)] font-light italic">Plan</span>
+          <h1 className="text-[40px] font-black text-[var(--notion-text)] leading-tight flex items-center gap-1">
+            <span className="text-[var(--brand-primary)]">Work</span>
+            <span className="text-[var(--brand-accent)]">Plan</span>
           </h1>
           <p className="text-[var(--notion-text-light)] text-lg font-medium -mt-1 tracking-tight capitalize">
             {deptConfig?.departmentName || t('common.workspace')}

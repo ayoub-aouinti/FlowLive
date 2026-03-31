@@ -14,7 +14,8 @@
     "delete": "Supprimer"
   },
   "dashboard": {
-    "title": "WorkPlan",
+    "appName": "FlowLive",
+    "appStatus": "Live",
     "subtitle": "Optimisez votre flux de travail",
     "table": "Table",
     "kanban": "Pipeline",

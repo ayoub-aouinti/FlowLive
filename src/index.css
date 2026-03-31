@@ -8,10 +8,10 @@
   --notion-text-light: #64748b; /* Slate-500 */
   --notion-hover: #f1f5f9; /* Slate-100 */
   --notion-active: #e2e8f0; /* Slate-200 */
-  --brand-primary: #1e293b; 
+  --brand-primary: #1b4382; 
   --brand-secondary: #475569;
-  --brand-accent: #2563eb;
-  --brand-accent-hover: #1d4ed8;
+  --brand-accent: #1b4382;
+  --brand-accent-hover: #153566;
 }
 
 .dark {

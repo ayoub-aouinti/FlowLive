@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Mail, Lock, User as UserIcon, Loader2, CheckCircle, ArrowRight, Sun, Moon } from 'lucide-react';
-import logo from '../assets/logo.png';
+const logo = '/logo.png';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 

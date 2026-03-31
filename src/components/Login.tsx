@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import logo from '../assets/logo.png';
+const logo = '/logo.png';
 import { Chrome, Mail, Lock, Loader2, UserPlus, Sun, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -53,10 +53,12 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl border border-[var(--notion-border)] animate-in slide-in-from-bottom duration-500">
         <div className="flex flex-col items-center mb-8 text-center">
           <div className="mb-6 p-4 bg-white dark:bg-slate-700 rounded-2xl shadow-sm border border-gray-50 transform hover:scale-105 transition-transform duration-300">
-            <img src={logo} alt="WorkPlan" className="w-20 h-20 object-contain" />
+            <img src={logo} alt="FlowLive" className="w-20 h-20 object-contain" />
           </div>
-          <h1 className="text-4xl font-black text-[var(--notion-text)] tracking-tight">
-            Work<span className="text-[var(--notion-text-light)] font-light italic">Plan</span>
+          <h1 className="text-3xl font-black mb-2 animate-in slide-in-from-top-4 duration-500 flex items-center justify-center gap-2">
+            <span className="text-[var(--brand-primary)]">Work</span>
+            <span className="text-[var(--brand-accent)]">Plan</span>
+            <span className="text-[var(--notion-text)]"> Login</span>
           </h1>
           <p className="text-[var(--notion-text-light)] mt-3 font-medium text-sm max-w-xs">
             {t('dashboard.subtitle')}

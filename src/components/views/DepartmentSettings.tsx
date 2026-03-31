@@ -287,7 +287,7 @@ export function DepartmentSettings() {
 
         <div className="bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-2xl shadow-xl overflow-hidden mb-6 border-b-4 border-b-[var(--notion-border)]">
           {/* Fixed header row */}
-          <div className="flex items-center gap-3 px-6 py-4 bg-[var(--brand-primary)] text-[var(--notion-bg)] dark:text-slate-900 text-xs font-black uppercase tracking-widest shadow-md relative z-10">
+          <div className="flex items-center gap-3 px-6 py-4 bg-[var(--notion-sidebar)] text-[var(--notion-text-light)] text-[10px] font-black uppercase tracking-widest border-b border-[var(--notion-border)] relative z-10">
             <GripVertical size={14} className="opacity-40 shrink-0" />
             <span className="w-[30%]">Nom du champ</span>
             <span className="flex-1 opacity-70">Type de donnée</span>
@@ -531,12 +531,12 @@ export function DepartmentSettings() {
 
         <div className="bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-2xl shadow-xl overflow-hidden mb-8 border-b-4 border-b-[var(--notion-border)]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--brand-primary)] text-[var(--notion-bg)] dark:text-slate-900 border-b border-[var(--notion-border)]">
+            <thead className="bg-[var(--notion-sidebar)] border-b border-[var(--notion-border)]">
               <tr>
-                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest">Nom</th>
-                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-center">État</th>
-                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-center">Rôle</th>
-                <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-right">Actions</th>
+                <th className="px-6 py-4 font-black text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest">Nom</th>
+                <th className="px-6 py-4 font-black text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest text-center">État</th>
+                <th className="px-6 py-4 font-black text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest text-center">Rôle</th>
+                <th className="px-6 py-4 font-black text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--notion-border)]">

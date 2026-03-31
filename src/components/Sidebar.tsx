@@ -29,7 +29,7 @@ import InboxPanel from './InboxPanel';
 import SettingsModal from './SettingsModal';
 import type { Project, Notification } from '../types';
 import { socket } from '../services/socket';
-import logo from '../assets/logo.png';
+const logo = '/logo.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -210,10 +210,10 @@ const Sidebar: React.FC = () => {
                       key={item.id}
                       onClick={() => setView(item.id)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer transition-colors group ${
-                        view === item.id ? 'bg-[var(--notion-active)] text-[var(--notion-text)] font-bold shadow-sm' : 'text-[var(--notion-text-light)]'
+                        view === item.id ? 'bg-[var(--brand-accent)] text-white shadow-lg shadow-[var(--brand-accent)]/20' : 'text-[var(--notion-text-light)]'
                       }`}
                     >
-                      <item.icon size={14} className={view === item.id ? 'text-[var(--brand-accent)]' : 'text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]'} />
+                      <item.icon size={14} className={view === item.id ? 'text-white' : 'text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]'} />
                       <span className="text-sm text-left truncate">{item.label}</span>
                     </button>
                   ))}
@@ -256,7 +256,7 @@ const Sidebar: React.FC = () => {
 
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors group">
             <div className="relative">
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-[var(--brand-accent)] flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[var(--brand-accent)]/20 animate-in zoom-in-50">
                 {user?.name?.[0] || '?'}
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
