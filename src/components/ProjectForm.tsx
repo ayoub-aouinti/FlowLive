@@ -83,7 +83,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
     const payload: Record<string, unknown> = { 
       name: projectName, 
       initiatorName: user.name,
-      initiatorId: user._id,
+      initiatorId: user._id || user.id,
       departmentId: user.departmentId
     };
     fields.forEach(f => {

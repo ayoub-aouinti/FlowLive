@@ -66,8 +66,8 @@ if (!USE_LOCAL_DB) {
 
 transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false, 
+  port: parseInt(process.env.EMAIL_PORT, 10) || 587,
+  secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER || 'placeholder@ethereal.email',
     pass: process.env.EMAIL_PASS || 'placeholder'
@@ -104,7 +104,7 @@ if (!USE_LOCAL_DB) {
     },
     save: async (data) => {
       const projects = readLocal('projects.json');
-      const newProject = { ...data, _id: Date.now().toString(), createdAt: new Date() };
+      const newProject = { ...data, _id: Date.now().toString(), status: data.status || 'Nouveau', createdAt: new Date() };
       projects.push(newProject);
       writeLocal('projects.json', projects);
       return newProject;
@@ -170,7 +170,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json({ 
       token, 
-      user: { id: user._id || user.id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId } 
+      user: { id: user._id || user.id, _id: user._id || user.id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId } 
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -220,7 +220,7 @@ app.post('/api/departments', authenticateToken, async (req, res) => {
       const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
       
       const mailOptions = {
-        from: '"WorkPlan System" <noreply@workplan.com>',
+        from: process.env.EMAIL_FROM || '"WorkPlan System" <noreply@workplan.com>',
         to: newDept.adminId,
         subject: 'Invitation à rejoindre WorkPlan',
         html: `
@@ -300,7 +300,7 @@ app.put('/api/departments/:id', authenticateToken, async (req, res) => {
 
         const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
         const mailOptions = {
-          from: '"WorkPlan System" <noreply@workplan.com>',
+          from: process.env.EMAIL_FROM || '"WorkPlan System" <noreply@workplan.com>',
           to: adminId,
           subject: 'Invitation à gérer un département sur WorkPlan',
           html: `<h1>Bienvenue sur WorkPlan</h1><p>Vous avez été désigné administrateur pour <b>${name}</b>.</p><a href="${signupLink}">Configurer mon compte</a>`
@@ -601,7 +601,7 @@ app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
       // Send Email
       const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
       const mailOptions = {
-        from: '"WorkPlan System" <noreply@workplan.com>',
+        from: process.env.EMAIL_FROM || '"WorkPlan System" <noreply@workplan.com>',
         to: trimmedEmail,
         subject: 'Invitation à rejoindre WorkPlan',
         html: `

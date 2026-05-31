@@ -246,7 +246,7 @@ const Dashboard: React.FC = () => {
 
       <div className="min-h-[500px]">
         {view === 'table' && <TableView projects={projects} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} formFields={deptConfig?.formFields || undefined} theme={theme} t={t} />}
-        {view === 'kanban' && <KanbanView projects={projects} theme={theme} />}
+        {view === 'kanban' && <KanbanView projects={projects} theme={theme} getUserName={getUserName} userRole={userRole} />}
         {view === 'timeline' && <TimelineView projects={projects} getUserName={getUserName} theme={theme} />}
         {view === 'calendrier' && <CalendarView projects={projects} />}
         {view === 'reporting' && <ReportingView projects={projects} />}
@@ -303,6 +303,15 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
                 </div>
               </td>
               {fields.map(f => {
+                if (f.id === 'f_initiator') {
+                  return (
+                    <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)]">
+                      <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-100 px-1.5 py-0.5 rounded text-[12px] font-medium border border-purple-200 dark:border-purple-500/30">
+                        {p.initiatorName || '-'}
+                      </span>
+                    </td>
+                  );
+                }
                 if (f.type === 'user') {
                   return (
                     <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)]">
@@ -360,12 +369,13 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
   );
 };
 
-const KanbanView = ({ projects, theme }: { projects: Project[], theme: string }) => {
+const KanbanView = ({ projects, theme, getUserName, userRole }: { projects: Project[], theme: string, getUserName: (u: string | User | undefined) => string, userRole: string }) => {
   const columns = ['Nouveau', 'En cours', 'En révision', 'Terminé'];
+  const showWorker = userRole === 'initiateur' || userRole === 'admin';
   return (
     <div className="flex gap-4 overflow-x-auto pb-8 -mx-12 px-12 scrollbar-hide">
       {columns.map(col => {
-        const pCol = projects.filter(p => p.status === col);
+        const pCol = projects.filter(p => (p.status || 'Nouveau') === col);
         return (
           <div key={col} className="min-w-[280px] flex-1">
             <div className="flex items-center gap-2 mb-2 px-2">
@@ -390,6 +400,11 @@ const KanbanView = ({ projects, theme }: { projects: Project[], theme: string })
                         {p.product}
                       </span>
                     </div>
+                    {showWorker && p.assignedTo && (
+                      <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-100 px-1.5 py-0.5 rounded text-[10px] font-medium border border-blue-200 dark:border-blue-500/30">
+                        {getUserName(p.assignedTo)}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

@@ -16,5 +16,68 @@
     "link": "/table",
     "read": false,
     "createdAt": "2026-03-29T18:45:51.986Z"
+  },
+  {
+    "id": "notif_1779721414739f79mo",
+    "userId": "init_1",
+    "title": "Mise à jour du statut",
+    "message": "Le statut du projet \"test-app\" est passé à \"En cours\"",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-05-25T15:03:34.739Z"
+  },
+  {
+    "id": "notif_1779721424826cir30",
+    "userId": "init_1",
+    "title": "Mise à jour du statut",
+    "message": "Le statut du projet \"test-app\" est passé à \"Nouveau\"",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-05-25T15:03:44.826Z"
+  },
+  {
+    "id": "notif_1779721794712p5ytd",
+    "userId": "user_1",
+    "title": "Nouveau projet assigné",
+    "message": "On vous a assigné le projet: test-app-2",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-05-25T15:09:54.712Z"
+  },
+  {
+    "id": "notif_1779721873347kd2xv",
+    "userId": "user_1",
+    "title": "Nouveau projet assigné",
+    "message": "On vous a assigné le projet: app-test-2",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-05-25T15:11:13.347Z"
+  },
+  {
+    "id": "notif_1779722367986g12uz",
+    "userId": "user_1",
+    "title": "Nouveau projet assigné",
+    "message": "On vous a assigné le projet: test-222",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-05-25T15:19:27.987Z"
+  },
+  {
+    "id": "notif_1779722492041pwkwu",
+    "userId": "init_1",
+    "title": "Mise à jour du statut",
+    "message": "Le statut du projet \"test-app\" est passé à \"En cours\"",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-05-25T15:21:32.041Z"
+  },
+  {
+    "id": "notif_1779722496803x5265",
+    "userId": "init_1",
+    "title": "Mise à jour du statut",
+    "message": "Le statut du projet \"test-app\" est passé à \"Nouveau\"",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-05-25T15:21:36.803Z"
   }
 ]

@@ -26,12 +26,5 @@
     "departmentId": "dept_1774829002951",
     "token": "64832ed7690950d37100aef1cc6fb2a6f4e19df5ac6efd00e70728ec2b88d356",
     "expiresAt": "2026-04-06T00:03:22.952Z"
-  },
-  {
-    "email": "ayoubaouinti1990@gmail.com",
-    "role": "admin",
-    "departmentId": "dept_1774829312758",
-    "token": "a17ee0200eff97ad4fdd9791cf0b1787b6768e4967b03ae2c45ec9c97b97bcc0",
-    "expiresAt": "2026-04-06T00:08:32.759Z"
   }
 ]
