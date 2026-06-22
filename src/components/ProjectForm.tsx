@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../services/socket';
-import { X, AlertCircle, ChevronDown } from 'lucide-react';
+import { X, AlertCircle, ChevronDown, Paperclip } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import type { User } from '../types';
@@ -8,7 +8,7 @@ import type { User } from '../types';
 interface FormField {
   id: string;
   label: string;
-  type: 'text' | 'date' | 'select' | 'checkbox' | 'user' | 'product' | 'projectType';
+  type: 'text' | 'date' | 'select' | 'checkbox' | 'user' | 'product' | 'projectType' | 'attachment';
   required: boolean;
 }
 
@@ -195,6 +195,53 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
             )}
           </select>
           <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--notion-text-light)] opacity-40 group-hover:opacity-100 transition-opacity" />
+        </div>
+      );
+    }
+
+    if (field.type === 'attachment') {
+      const raw = getFieldValue(field) as string;
+      let att: { name: string; size: number } | null = null;
+      try { if (raw) att = JSON.parse(raw); } catch { /* ignore */ }
+
+      return (
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border border-dashed border-[var(--notion-border)] hover:border-[var(--brand-accent)] transition-all text-sm text-[var(--notion-text-light)] hover:text-[var(--notion-text)]">
+            <Paperclip size={14} />
+            <span className="truncate max-w-[180px]">{att ? att.name : 'Choisir un fichier'}</span>
+            <input
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 8 * 1024 * 1024) {
+                  alert('Fichier trop volumineux (max 8 Mo)');
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setFieldValue(field.id, JSON.stringify({
+                    name: file.name,
+                    size: file.size,
+                    mimeType: file.type,
+                    data: reader.result as string
+                  }));
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+          </label>
+          {att && (
+            <span className="text-[11px] text-[var(--notion-text-light)]">
+              {(att.size / 1024).toFixed(0)} Ko
+            </span>
+          )}
+          {att && (
+            <button type="button" onClick={() => setFieldValue(field.id, '')} className="text-[var(--notion-text-light)] hover:text-rose-500 transition-colors">
+              <X size={13} />
+            </button>
+          )}
         </div>
       );
     }

@@ -22,7 +22,7 @@ export interface Department {
 export interface FormField {
   id: string;
   label: string;
-  type: 'text' | 'date' | 'select' | 'checkbox' | 'user' | 'product' | 'projectType';
+  type: 'text' | 'date' | 'select' | 'checkbox' | 'user' | 'product' | 'projectType' | 'attachment';
   required: boolean;
 }
 

@@ -51,8 +51,8 @@
     "name": "ayoubinitiateur",
     "email": "ayoubaouinti@gmail.com",
     "password": "$2b$10$OsFi32fcZTgmRArkgb/8eOI06bNP/T/fFAyTB9NJ5zWhSdcp3S/B.",
-    "role": "chef de produit",
-    "departmentId": "dept_1774829312758",
+    "role": "worker",
+    "departmentId": "dept_1",
     "createdAt": "2026-04-14T17:00:56.831Z"
   }
 ]

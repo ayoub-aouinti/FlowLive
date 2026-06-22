@@ -13,7 +13,8 @@ import {
   AlertCircle,
   X,
   ChevronUp,
-  ChevronDown as ChevronDownIcon
+  ChevronDown as ChevronDownIcon,
+  Paperclip
 } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
@@ -524,6 +525,33 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
                     </td>
                   );
                 }
+                if (f.type === 'attachment') {
+                  const raw = p._customFields?.[f.id];
+                  if (!raw) return (
+                    <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] text-[var(--notion-text-light)] text-[12px]">—</td>
+                  );
+                  try {
+                    const att = JSON.parse(raw as string) as { name: string; data: string; mimeType: string; size: number };
+                    return (
+                      <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)]">
+                        <a
+                          href={att.data}
+                          download={att.name}
+                          title={`${att.name} (${(att.size / 1024).toFixed(0)} Ko)`}
+                          className="flex items-center gap-1.5 text-[var(--brand-primary)] hover:underline text-[11px] font-medium max-w-[140px] truncate"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Paperclip size={11} className="flex-shrink-0" />
+                          <span className="truncate">{att.name}</span>
+                        </a>
+                      </td>
+                    );
+                  } catch {
+                    return (
+                      <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] text-[var(--notion-text-light)] text-[12px]">—</td>
+                    );
+                  }
+                }
                 return (
                   <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] text-[var(--notion-text)]">
                      {p._customFields?.[f.id] ? String(p._customFields[f.id]) : '-'}
@@ -568,6 +596,11 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
   const showAssignee = userRole === 'chef de produit' || userRole === 'chef de projet';
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  const isOverdue = (p: Project) => {
+    if (p.status === 'Terminé') return false;
+    return new Date(p.deadline) < new Date(new Date().toDateString());
+  };
 
   const handleDragStart = (e: React.DragEvent, projectId: string) => {
     setDraggedId(projectId);
@@ -622,15 +655,27 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
             <div className={`space-y-2 flex-1 rounded-xl p-1 min-h-[80px] transition-all duration-150 ${isDroppingHere ? 'bg-[var(--brand-primary)]/5 ring-2 ring-[var(--brand-primary)] ring-dashed' : ''}`}>
               {pCol.map(p => {
                 const isDragging = draggedId === p._id;
+                const overdue = isOverdue(p);
                 return (
                   <div
                     key={p._id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, p._id)}
                     onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
-                    className={`bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-md shadow-sm p-3 transition-all duration-150 group select-none
+                    className={`rounded-md shadow-sm p-3 transition-all duration-150 group select-none border
+                      ${overdue
+                        ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-400 dark:border-rose-700 shadow-rose-100 dark:shadow-rose-900/20'
+                        : 'bg-[var(--notion-bg)] border-[var(--notion-border)]'}
                       ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : 'hover:shadow-md cursor-grab active:cursor-grabbing active:scale-[0.98]'}`}
                   >
+                    {/* Overdue banner */}
+                    {overdue && (
+                      <div className="flex items-center gap-1 mb-2 text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                        <AlertCircle size={11} />
+                        En retard — {new Date(p.deadline).toLocaleDateString('fr-FR')}
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 mb-2 text-sm font-medium text-[var(--notion-text)]">
                       <FileIcon />
                       <span className="truncate">{p.name}</span>

@@ -19,6 +19,7 @@ const FIELD_TYPE_OPTIONS: { value: FormField['type']; label: string }[] = [
   { value: 'user', label: 'Utilisateur (Responsable)' },
   { value: 'product', label: 'Produit (liste dept.)' },
   { value: 'projectType', label: 'Type de projet (liste dept.)' },
+  { value: 'attachment', label: 'Pièce jointe (fichier)' },
 ];
 
 const DEFAULT_FORM_FIELDS: FormField[] = [
@@ -130,14 +131,30 @@ export function DepartmentSettings() {
 
     setIsInviting(true);
     try {
-      await axios.post('http://localhost:5001/api/users/invite-bulk', { emails, role: inviteRole }, {
+      const res = await axios.post('http://localhost:5001/api/users/invite-bulk', { emails, role: inviteRole }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBulkEmails('');
-      alert(`${emails.length} invitations envoyées avec succès !`);
+      const { invited = [], assigned = [], skipped = [] } = res.data as {
+        invited: string[];
+        assigned: { email: string; name: string }[];
+        skipped: { email: string; reason: string }[];
+      };
+      const parts: string[] = [];
+      if (invited.length > 0) parts.push(`✅ ${invited.length} invitation(s) envoyée(s) par email.`);
+      if (assigned.length > 0) {
+        parts.push(`✅ ${assigned.length} utilisateur(s) ajouté(s) directement au département :`);
+        assigned.forEach(a => parts.push(`  • ${a.name} (${a.email})`));
+      }
+      if (skipped.length > 0) {
+        parts.push(`⚠️ ${skipped.length} ignoré(s) :`);
+        skipped.forEach(s => parts.push(`  • ${s.email} — ${s.reason}`));
+      }
+      alert(parts.join('\n'));
       fetchData();
     } catch (err) {
       console.error('Failed to invite users', err);
+      alert('Erreur lors de l\'envoi des invitations.');
     } finally {
       setIsInviting(false);
     }

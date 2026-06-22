@@ -570,19 +570,30 @@ app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
     if (!emails || !Array.isArray(emails)) return res.status(400).json({ message: 'Liste d\'emails invalide' });
 
     const invitations = readLocal('invitations.json');
-    const results = { invited: [], skipped: [] };
+    const results = { invited: [], assigned: [], skipped: [] };
 
     for (const email of emails) {
       const trimmedEmail = email.trim().toLowerCase();
       if (!trimmedEmail) continue;
 
-      // Check if already invited or already a user
+      // Check if user already exists in the system
       const users = readLocal('users.json');
-      if (users.find(u => u.email === trimmedEmail)) {
-        results.skipped.push({ email: trimmedEmail, reason: 'Utilisateur existe déjà' });
+      const existingUser = users.find(u => u.email === trimmedEmail);
+      if (existingUser) {
+        if (existingUser.departmentId === req.user.departmentId) {
+          // Already in this department
+          results.skipped.push({ email: trimmedEmail, reason: 'Déjà membre de ce département' });
+        } else {
+          // Exists in another dept (or no dept) → assign directly, no email needed
+          const userIndex = users.findIndex(u => u.email === trimmedEmail);
+          users[userIndex].departmentId = req.user.departmentId;
+          if (role) users[userIndex].role = role;
+          writeLocal('users.json', users);
+          results.assigned.push({ email: trimmedEmail, name: existingUser.name });
+        }
         continue;
       }
-      if (invitations.find(i => i.email === trimmedEmail)) {
+      if (invitations.find(i => i.email === trimmedEmail && i.departmentId === req.user.departmentId)) {
         results.skipped.push({ email: trimmedEmail, reason: 'Invitation déjà envoyée' });
         continue;
       }
@@ -616,7 +627,12 @@ app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
           </div>
         `
       };
-      transporter.sendMail(mailOptions).catch(err => console.error(`📧 Error sending to ${trimmedEmail}:`, err.message));
+      // Always log the signup link so admin can share it manually during development
+      console.log(`📧 Invitation link for ${trimmedEmail}: ${signupLink}`);
+      transporter.sendMail(mailOptions).catch(err => {
+        console.error(`📧 Email delivery failed for ${trimmedEmail}: ${err.message}`);
+        console.log(`📧 Share this link manually: ${signupLink}`);
+      });
     }
 
     writeLocal('invitations.json', invitations);
@@ -852,6 +868,49 @@ io.on('connection', (socket) => {
     console.log('👋 User disconnected:', socket.id);
   });
 });
+
+// ── Overdue deadline checker ──────────────────────────────────────────────────
+const checkOverdueProjects = () => {
+  try {
+    if (!USE_LOCAL_DB) return;
+    const projects = readLocal('projects.json');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    let changed = false;
+    projects.forEach(project => {
+      if (!project.deadline || project.status === 'Terminé') return;
+      const deadline = new Date(project.deadline);
+      deadline.setHours(0, 0, 0, 0);
+      if (deadline >= today) return; // not overdue yet
+
+      // Send at most one notification per project per day
+      if (project.overdueNotifiedDate === todayStr) return;
+
+      if (project.assignedTo) {
+        const deadlineFormatted = new Date(project.deadline).toLocaleDateString('fr-FR');
+        createNotification(
+          project.assignedTo,
+          'Deadline dépassée',
+          `Le projet "${project.name}" a dépassé sa deadline du ${deadlineFormatted}. Mettez à jour son statut.`,
+          '/table'
+        );
+      }
+      project.overdueNotifiedDate = todayStr;
+      changed = true;
+    });
+
+    if (changed) writeLocal('projects.json', projects);
+    console.log(`🕐 Overdue check done — ${new Date().toLocaleTimeString()}`);
+  } catch (err) {
+    console.error('Error checking overdue projects:', err);
+  }
+};
+
+// Run on startup then every hour
+checkOverdueProjects();
+setInterval(checkOverdueProjects, 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
