@@ -57,17 +57,24 @@
         "label": "Urgent",
         "type": "checkbox",
         "required": true
+      },
+      {
+        "id": "f_1780582631758",
+        "label": "description",
+        "type": "text",
+        "required": true
       }
     ],
     "activePages": [
       "table",
       "kanban",
-      "timeline",
       "calendrier",
       "reporting",
       "stats",
       "urgences"
-    ]
+    ],
+    "coverUrl": null,
+    "logoUrl": null
   },
   {
     "name": "department medis digital",

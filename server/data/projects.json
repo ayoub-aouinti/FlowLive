@@ -22,7 +22,7 @@
     },
     "_id": "1774570161681",
     "createdAt": "2026-03-27T00:09:21.681Z",
-    "status": "Nouveau"
+    "status": "En cours"
   },
   {
     "name": "test-app",
@@ -47,7 +47,7 @@
     },
     "_id": "1774570722536",
     "createdAt": "2026-03-27T00:18:42.536Z",
-    "status": "Nouveau"
+    "status": "Terminé"
   },
   {
     "name": "dev",
@@ -173,5 +173,31 @@
     "_id": "1779722366338",
     "createdAt": "2026-05-25T15:19:26.338Z",
     "status": "Nouveau"
+  },
+  {
+    "name": "tache222",
+    "initiatorName": "Initiateur Test",
+    "initiatorId": "init_1",
+    "departmentId": "dept_1",
+    "f_initiator": "",
+    "assignedTo": "user_1",
+    "product": "Hardware",
+    "type": "Maintenance",
+    "deadline": "2026-06-11",
+    "priority": "Haute",
+    "urgent": true,
+    "f_1780582631758": "hjhdfgjdfkgjmhkghfgdkh,l,nl",
+    "_customFields": {
+      "f_initiator": "",
+      "f_assignedTo": "user_1",
+      "f_product": "Hardware",
+      "f_type": "Maintenance",
+      "f_deadline": "2026-06-11",
+      "f_priority": "Haute",
+      "f_urgent": true,
+      "f_1780582631758": "hjhdfgjdfkgjmhkghfgdkh,l,nl"
+    },
+    "_id": "1780582766429",
+    "createdAt": "2026-06-04T14:19:26.429Z"
   }
 ]

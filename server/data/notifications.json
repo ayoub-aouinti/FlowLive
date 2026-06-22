@@ -79,5 +79,32 @@
     "link": "/table",
     "read": false,
     "createdAt": "2026-05-25T15:21:36.803Z"
+  },
+  {
+    "id": "notif_17805827681001ou4e",
+    "userId": "user_1",
+    "title": "Nouveau projet assigné",
+    "message": "On vous a assigné le projet: tache222",
+    "link": "/table",
+    "read": true,
+    "createdAt": "2026-06-04T14:19:28.100Z"
+  },
+  {
+    "id": "notif_17805828171408yu6v",
+    "userId": "init_1",
+    "title": "Mise à jour du statut",
+    "message": "Le statut du projet \"test-app\" est passé à \"En cours\"",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-06-04T14:20:17.140Z"
+  },
+  {
+    "id": "notif_1780583880025lgmjw",
+    "userId": "init_1",
+    "title": "Mise à jour du statut",
+    "message": "Le statut du projet \"test-app\" est passé à \"Terminé\"",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-06-04T14:38:00.025Z"
   }
 ]
