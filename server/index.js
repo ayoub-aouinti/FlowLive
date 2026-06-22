@@ -210,7 +210,7 @@ app.post('/api/departments', authenticateToken, async (req, res) => {
       const invitations = readLocal('invitations.json');
       invitations.push({
         email: newDept.adminId,
-        role: 'admin',
+        role: 'chef de projet',
         departmentId: newDept.id,
         token: token,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
@@ -218,7 +218,7 @@ app.post('/api/departments', authenticateToken, async (req, res) => {
       writeLocal('invitations.json', invitations);
 
       const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
-      
+
       const mailOptions = {
         from: process.env.EMAIL_FROM || '"WorkPlan System" <noreply@workplan.com>',
         to: newDept.adminId,
@@ -239,7 +239,7 @@ app.post('/api/departments', authenticateToken, async (req, res) => {
       // Upgrade existing user to Admin for this department
       const userIndex = users.findIndex(u => u.email === newDept.adminId);
       if (userIndex !== -1) {
-        users[userIndex].role = 'admin';
+        users[userIndex].role = 'chef de projet';
         users[userIndex].departmentId = newDept.id;
         writeLocal('users.json', users);
         console.log(`✅ Existing user ${newDept.adminId} upgraded to Admin`);
@@ -278,20 +278,20 @@ app.put('/api/departments/:id', authenticateToken, async (req, res) => {
       const newAdmin = users.find(u => u.email === adminId);
       
       if (newAdmin) {
-        // Upgrade existing user to admin for this dept
+        // Upgrade existing user to chef de projet for this dept
         const userIdx = users.findIndex(u => u.email === adminId);
-        users[userIdx].role = 'admin';
+        users[userIdx].role = 'chef de projet';
         users[userIdx].departmentId = id;
         writeLocal('users.json', users);
-        console.log(`✅ User ${adminId} upgraded to Admin via Edit`);
+        console.log(`✅ User ${adminId} upgraded to Chef de Projet via Edit`);
       } else {
         // Create invitation for new email
-        console.log(`👤 Creating invitation for new admin (Edit): ${adminId}`);
+        console.log(`👤 Creating invitation for new chef de projet (Edit): ${adminId}`);
         const token = crypto.randomBytes(32).toString('hex');
         const invitations = readLocal('invitations.json');
         invitations.push({
           email: adminId,
-          role: 'admin',
+          role: 'chef de projet',
           departmentId: id,
           token: token,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -432,14 +432,14 @@ app.get('/api/auth/verify-email/:token', async (req, res) => {
 
 app.put('/api/departments/:id/config', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'chef de projet') {
       return res.status(403).json({ message: 'Access denied' });
     }
     const departments = readLocal('departments.json');
     const index = departments.findIndex(d => d.id === req.params.id);
     if (index === -1) return res.status(404).json({ message: 'Department not found' });
 
-    // Allow: the admin's token departmentId matches, OR the admin is listed as adminId of the dept
+    // Allow: the chef de projet's token departmentId matches, OR they are listed as adminId of the dept
     const dept = departments[index];
     const isAuthorized = req.user.departmentId === req.params.id || dept.adminId === req.user.email;
     if (!isAuthorized) {
@@ -470,7 +470,7 @@ app.get('/api/departments/my-config', authenticateToken, async (req, res) => {
       dept = departments.find(d => d.id === req.query.departmentId);
     } else {
       dept = departments.find(d => d.id === req.user.departmentId);
-      if (!dept && req.user.role === 'admin') {
+      if (!dept && req.user.role === 'chef de projet') {
         dept = departments.find(d => d.adminId === req.user.email);
       }
     }
@@ -565,7 +565,7 @@ const createNotification = (userId, title, message, link = null) => {
 };
 app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
     const { emails, role } = req.body; // emails is an array
     if (!emails || !Array.isArray(emails)) return res.status(400).json({ message: 'Liste d\'emails invalide' });
 
@@ -628,7 +628,7 @@ app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
 
 app.post('/api/departments/:id/import-resources', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
     const { products, types } = req.body;
     
     const departments = readLocal('departments.json');
@@ -663,9 +663,9 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
     if (USE_LOCAL_DB) {
       let projects = readLocal('projects.json');
       
-      if (req.user.role === 'admin') {
+      if (req.user.role === 'chef de projet') {
         projects = projects.filter(p => p.departmentId === req.user.departmentId);
-      } else if (req.user.role === 'initiateur') {
+      } else if (req.user.role === 'chef de produit') {
         projects = projects.filter(p => p.departmentId === req.user.departmentId && p.initiatorId === req.user.id);
       } else if (req.user.role === 'worker') {
         projects = projects.filter(p => p.departmentId === req.user.departmentId && p.assignedTo === req.user.id);
@@ -693,9 +693,9 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       const users = readLocal('users.json');
       let filteredUsers = [];
       
-      if (req.user.role === 'admin') {
+      if (req.user.role === 'chef de projet') {
         filteredUsers = users.filter(u => u.departmentId === req.user.departmentId);
-      } else if (req.user.role === 'initiateur') {
+      } else if (req.user.role === 'chef de produit') {
         filteredUsers = users.filter(u => u.departmentId === req.user.departmentId && u.role === 'worker');
       }
 
@@ -707,7 +707,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 });
 app.get('/api/departments/members-status', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
     const users = readLocal('users.json').filter(u => u.departmentId === req.user.departmentId);
     const invitations = readLocal('invitations.json').filter(i => i.departmentId === req.user.departmentId);
     
@@ -725,7 +725,7 @@ app.get('/api/departments/members-status', authenticateToken, async (req, res) =
 
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
     const users = readLocal('users.json');
     const index = users.findIndex(u => (u._id === req.params.id || u.id === req.params.id) && u.departmentId === req.user.departmentId);
     
@@ -751,8 +751,8 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
 
 app.delete('/api/users/:id', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
-    
+    if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
+
     // Remove from users
     let users = readLocal('users.json');
     users = users.filter(u => !((u._id === req.params.id || u.id === req.params.id) && u.departmentId === req.user.departmentId));
@@ -808,19 +808,38 @@ io.on('connection', (socket) => {
         const projects = readLocal('projects.json');
         const pIndex = projects.findIndex(p => p._id === data.projectId);
         if (pIndex !== -1) {
+          const oldStatus = projects[pIndex].status;
           projects[pIndex].status = data.status;
           writeLocal('projects.json', projects);
           const updatedProject = projects[pIndex];
           io.emit('project_updated', updatedProject);
 
-          // Create notification for project initiator
+          const moverName = data.workerName || 'Un membre';
+          const msg = `${moverName} a déplacé "${updatedProject.name}" : ${oldStatus} → ${updatedProject.status}`;
+
+          // Notify chef de produit (initiator)
           if (updatedProject.initiatorId) {
-             createNotification(
-               updatedProject.initiatorId,
-               'Mise à jour du statut',
-               `Le statut du projet "${updatedProject.name}" est passé à "${updatedProject.status}"`,
-               `/table`
-             );
+            createNotification(
+              updatedProject.initiatorId,
+              'Statut mis à jour',
+              msg,
+              '/table'
+            );
+          }
+
+          // Notify all chefs de projet of the same department
+          if (updatedProject.departmentId) {
+            const users = readLocal('users.json');
+            users
+              .filter(u => u.role === 'chef de projet' && u.departmentId === updatedProject.departmentId)
+              .forEach(chef => {
+                createNotification(
+                  chef.id || chef._id,
+                  'Statut mis à jour',
+                  msg,
+                  '/table'
+                );
+              });
           }
         }
       }

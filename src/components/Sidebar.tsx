@@ -166,7 +166,7 @@ const Sidebar: React.FC = () => {
             </div>
           )}
 
-          {user?.role === 'admin' && (
+          {user?.role === 'chef de projet' && (
             <div 
               onClick={() => setView('dept_cockpit')}
               className={`flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--notion-hover)] rounded-md cursor-pointer transition-colors group ${view === 'dept_cockpit' ? 'bg-[var(--notion-active)] text-[var(--notion-text)] font-bold shadow-sm' : 'text-[var(--notion-text)]'}`}

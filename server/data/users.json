@@ -13,7 +13,7 @@
     "name": "Admin User",
     "email": "admin@flow.com",
     "password": "password123",
-    "role": "admin",
+    "role": "chef de projet",
     "departmentId": "dept_1",
     "isVerified": true
   },
@@ -31,7 +31,7 @@
     "name": "Initiateur Test",
     "email": "init@flow.com",
     "password": "password123",
-    "role": "initiateur",
+    "role": "chef de produit",
     "departmentId": "dept_1",
     "isVerified": true
   },
@@ -40,7 +40,7 @@
     "name": "Ayoub Aouinti",
     "email": "ayoubaouinti1990@gmail.com",
     "password": "$2b$10$NgXyYln/Hqx6NHcJvJlkAOeKCul3EIS4JT6g8iqwelxj/Nm.pI44O",
-    "role": "admin",
+    "role": "chef de projet",
     "isVerified": false,
     "verificationToken": "6fb2e2761657e87936d9f3505ee24d8e7d21464e516dccd603e274ed2e10d104",
     "createdAt": "2026-03-30T00:22:51.082Z",
@@ -51,7 +51,7 @@
     "name": "ayoubinitiateur",
     "email": "ayoubaouinti@gmail.com",
     "password": "$2b$10$OsFi32fcZTgmRArkgb/8eOI06bNP/T/fFAyTB9NJ5zWhSdcp3S/B.",
-    "role": "initiateur",
+    "role": "chef de produit",
     "departmentId": "dept_1774829312758",
     "createdAt": "2026-04-14T17:00:56.831Z"
   }

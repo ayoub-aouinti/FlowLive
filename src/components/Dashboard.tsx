@@ -1,16 +1,19 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { socket } from '../services/socket';
-import { 
-  Table as TableIcon, 
-  Columns, 
-  Calendar as CalendarIcon, 
-  Search, 
-  Filter, 
-  ArrowUpDown, 
+import {
+  Table as TableIcon,
+  Columns,
+  Calendar as CalendarIcon,
+  Search,
+  Filter,
+  ArrowUpDown,
   Plus,
   BarChart2,
   PieChart,
-  AlertCircle
+  AlertCircle,
+  X,
+  ChevronUp,
+  ChevronDown as ChevronDownIcon
 } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
@@ -79,6 +82,59 @@ const Dashboard: React.FC = () => {
   } | null>(null);
   const { token } = useAuth();
 
+  // Search / Filter / Sort state
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterPriority, setFilterPriority] = useState<string[]>([]);
+  const [filterUrgent, setFilterUrgent] = useState<boolean | null>(null);
+  const [showSortPanel, setShowSortPanel] = useState(false);
+  const [sortField, setSortField] = useState<string>('deadline');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const filterRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  const activeFilterCount = filterStatus.length + filterPriority.length + (filterUrgent !== null ? 1 : 0);
+
+  const displayedProjects = useMemo(() => {
+    let result = [...projects];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        (p.product || '').toLowerCase().includes(q) ||
+        (p.type || '').toLowerCase().includes(q) ||
+        (p.initiatorName || '').toLowerCase().includes(q)
+      );
+    }
+    if (filterStatus.length > 0) result = result.filter(p => filterStatus.includes(p.status));
+    if (filterPriority.length > 0) result = result.filter(p => filterPriority.includes(p.priority));
+    if (filterUrgent !== null) result = result.filter(p => p.urgent === filterUrgent);
+    const priorityOrder: Record<string, number> = { 'Haute': 3, 'Moyenne': 2, 'Basse': 1 };
+    result.sort((a, b) => {
+      let va: string | number | Date, vb: string | number | Date;
+      if (sortField === 'name') { va = a.name; vb = b.name; }
+      else if (sortField === 'priority') { va = priorityOrder[a.priority] || 0; vb = priorityOrder[b.priority] || 0; }
+      else if (sortField === 'status') { va = a.status; vb = b.status; }
+      else if (sortField === 'createdAt') { va = new Date(a.createdAt); vb = new Date(b.createdAt); }
+      else { va = new Date(a.deadline); vb = new Date(b.deadline); }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return result;
+  }, [projects, searchQuery, filterStatus, filterPriority, filterUrgent, sortField, sortDir]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setShowFilterPanel(false);
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setShowSortPanel(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
@@ -103,20 +159,26 @@ const Dashboard: React.FC = () => {
       setProjects((prev) => [...prev, newProject].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()));
     });
 
+    socket.on('project_updated', (updatedProject: Project) => {
+      setProjects((prev) => prev.map(p => p._id === updatedProject._id ? updatedProject : p));
+    });
+
     const handleConfigUpdate = () => fetchData();
     window.addEventListener('dept_config_updated', handleConfigUpdate);
 
-    return () => { 
-      socket.off('project_added'); 
+    return () => {
+      socket.off('project_added');
+      socket.off('project_updated');
       window.removeEventListener('dept_config_updated', handleConfigUpdate);
     };
   }, [fetchData]);
 
-  const handleUpdateStatus = (projectId: string, status: string) => {
-    socket.emit('update_project_status', { projectId, status });
-  };
-
   const userRole = token ? JSON.parse(atob(token.split('.')[1])).role : 'guest';
+  const currentUserName = token ? JSON.parse(atob(token.split('.')[1])).name : '';
+
+  const handleUpdateStatus = (projectId: string, status: string) => {
+    socket.emit('update_project_status', { projectId, status, workerName: currentUserName });
+  };
 
   const getUserName = (userIdOrObj: string | User | undefined) => {
     if (!userIdOrObj) return '-';
@@ -146,93 +208,170 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-[var(--notion-border)] mb-4 overflow-x-auto scrollbar-hide">
-        {isPageActive('table') && (
-          <button 
-            onClick={() => setView('table')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold shadow-[0_1px_0_0_var(--brand-primary)]' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
-          >
-            <TableIcon size={14} />
-            {t('dashboard.table')}
-          </button>
-        )}
-        
-        {isPageActive('kanban') && (
-          <button 
-            onClick={() => setView('kanban')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold shadow-[0_1px_0_0_var(--brand-primary)]' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
-          >
-            <Columns size={14} />
-            {t('dashboard.kanban')}
-          </button>
-        )}
+      {/* Tab bar: tabs scroll independently, action buttons stay outside overflow so dropdowns aren't clipped */}
+      <div className="flex items-center border-b border-[var(--notion-border)] mb-4">
+        {/* Scrollable tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1 min-w-0">
+          {isPageActive('table') && (
+            <button
+              onClick={() => setView('table')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+            >
+              <TableIcon size={14} />
+              {t('dashboard.table')}
+            </button>
+          )}
+          {isPageActive('kanban') && (
+            <button
+              onClick={() => setView('kanban')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+            >
+              <Columns size={14} />
+              {t('dashboard.kanban')}
+            </button>
+          )}
+          {isPageActive('timeline') && (
+            <button
+              onClick={() => setView('timeline')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+            >
+              <CalendarIcon size={14} />
+              {t('dashboard.timeline')}
+            </button>
+          )}
+          {isPageActive('calendrier') && (
+            <button
+              onClick={() => setView('calendrier')}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'calendrier' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+            >
+              <CalendarIcon size={14} />
+              {t('dashboard.calendar')}
+            </button>
+          )}
+          {isPageActive('reporting') && (
+            <button
+              onClick={() => setView('reporting')}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'reporting' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+            >
+              <BarChart2 size={14} />
+              {t('dashboard.reporting')}
+            </button>
+          )}
+          {isPageActive('urgences') && (
+            <button
+              onClick={() => setView('urgences')}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'urgences' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+            >
+              <AlertCircle size={14} className="text-[#e11d48]" />
+              {t('dashboard.urgencies')}
+            </button>
+          )}
+          {isPageActive('stats') && (
+            <button
+              onClick={() => setView('stats')}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'stats' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+            >
+              <PieChart size={14} />
+              {t('dashboard.stats')}
+            </button>
+          )}
+        </div>
 
-        {isPageActive('timeline') && (
-          <button 
-            onClick={() => setView('timeline')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold shadow-[0_1px_0_0_var(--brand-primary)]' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
-          >
-            <CalendarIcon size={14} />
-            {t('dashboard.timeline')}
-          </button>
-        )}
+        {/* Action buttons — outside the overflow container so dropdowns are not clipped */}
+        <div className="flex items-center gap-1 pl-2 pr-2 flex-shrink-0">
+          {/* Search */}
+          <button
+            onClick={() => { setShowSearch(v => !v); if (showSearch) setSearchQuery(''); }}
+            className={`p-1.5 rounded transition-colors ${showSearch ? 'bg-[var(--brand-primary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
+            title="Rechercher"
+          ><Search size={16} /></button>
 
-        {isPageActive('calendrier') && (
-          <button 
-            onClick={() => setView('calendrier')}
-            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'calendrier' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold shadow-[0_1px_0_0_var(--brand-primary)]' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'
-            }`}
-          >
-            <CalendarIcon size={14} />
-            {t('dashboard.calendar')}
-          </button>
-        )}
+          {/* Filter */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => { setShowFilterPanel(v => !v); setShowSortPanel(false); }}
+              className={`p-1.5 rounded transition-colors relative ${showFilterPanel || activeFilterCount > 0 ? 'bg-[var(--brand-primary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
+              title="Filtrer"
+            >
+              <Filter size={16} />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{activeFilterCount}</span>
+              )}
+            </button>
+            {showFilterPanel && (
+              <div className="absolute right-0 top-full mt-2 z-50 w-72 bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-xl shadow-2xl p-4 space-y-4">
+                <div>
+                  <div className="text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-widest mb-2">Statut</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Nouveau', 'En cours', 'En révision', 'Terminé'].map(s => (
+                      <button key={s}
+                        onClick={() => setFilterStatus(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterStatus.includes(s) ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-[var(--brand-primary)]'}`}
+                      >{s}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-widest mb-2">Priorité</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Haute', 'Moyenne', 'Basse'].map(p => (
+                      <button key={p}
+                        onClick={() => setFilterPriority(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])}
+                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterPriority.includes(p) ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-[var(--brand-primary)]'}`}
+                      >{p}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-widest">Urgent</div>
+                  <button
+                    onClick={() => setFilterUrgent(prev => prev === true ? null : true)}
+                    className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterUrgent === true ? 'bg-rose-500 text-white border-rose-500' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-rose-400'}`}
+                  >Urgents seulement</button>
+                </div>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={() => { setFilterStatus([]); setFilterPriority([]); setFilterUrgent(null); }}
+                    className="w-full text-[11px] font-bold text-[var(--notion-text-light)] hover:text-[var(--notion-text)] border border-[var(--notion-border)] rounded-lg py-1.5 transition-colors"
+                  >Réinitialiser les filtres</button>
+                )}
+              </div>
+            )}
+          </div>
 
-        {isPageActive('reporting') && (
-          <button 
-            onClick={() => setView('reporting')}
-            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'reporting' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold shadow-[0_1px_0_0_var(--brand-primary)]' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'
-            }`}
-          >
-            <BarChart2 size={14} />
-            {t('dashboard.reporting')}
-          </button>
-        )}
-
-        {isPageActive('urgences') && (
-          <button 
-            onClick={() => setView('urgences')}
-            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'urgences' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold shadow-[0_1px_0_0_var(--brand-primary)]' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'
-            }`}
-          >
-            <AlertCircle size={14} className="text-[#e11d48]" />
-            {t('dashboard.urgencies')}
-          </button>
-        )}
-
-        {isPageActive('stats') && (
-          <button 
-            onClick={() => setView('stats')}
-            className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${
-              view === 'stats' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold shadow-[0_1px_0_0_var(--brand-primary)]' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'
-            }`}
-          >
-            <PieChart size={14} />
-            {t('dashboard.stats')}
-          </button>
-        )}
-        
-        <div className="flex-1" />
-        
-        <div className="flex items-center gap-2 pr-2">
-          <button className="p-1.5 hover:bg-[var(--notion-hover)] rounded transition-colors text-[var(--notion-text-light)]"><Search size={16} /></button>
-          <button className="p-1.5 hover:bg-[var(--notion-hover)] rounded transition-colors text-[var(--notion-text-light)]"><Filter size={16} /></button>
-          <button className="p-1.5 hover:bg-[var(--notion-hover)] rounded transition-colors text-[var(--notion-text-light)]"><ArrowUpDown size={16} /></button>
+          {/* Sort */}
+          <div className="relative" ref={sortRef}>
+            <button
+              onClick={() => { setShowSortPanel(v => !v); setShowFilterPanel(false); }}
+              className={`p-1.5 rounded transition-colors ${showSortPanel ? 'bg-[var(--brand-primary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
+              title="Trier"
+            ><ArrowUpDown size={16} /></button>
+            {showSortPanel && (
+              <div className="absolute right-0 top-full mt-2 z-50 w-56 bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-xl shadow-2xl p-2">
+                {[
+                  { field: 'deadline', label: 'Deadline' },
+                  { field: 'name', label: 'Nom' },
+                  { field: 'priority', label: 'Priorité' },
+                  { field: 'status', label: 'Statut' },
+                  { field: 'createdAt', label: 'Date de création' },
+                ].map(opt => (
+                  <button key={opt.field}
+                    onClick={() => { if (sortField === opt.field) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField(opt.field); setSortDir('asc'); } }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${sortField === opt.field ? 'bg-[var(--notion-hover)] font-semibold text-[var(--notion-text)]' : 'text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+                  >
+                    <span>{opt.label}</span>
+                    {sortField === opt.field && (
+                      sortDir === 'asc'
+                        ? <ChevronUp size={14} className="text-[var(--brand-primary)]" />
+                        : <ChevronDownIcon size={14} className="text-[var(--brand-primary)]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           
-          {token && JSON.parse(atob(token.split('.')[1])).role === 'initiateur' && (
+          {token && JSON.parse(atob(token.split('.')[1])).role === 'chef de produit' && (
             <button 
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-1 bg-[var(--brand-primary)] hover:bg-slate-700 text-white dark:text-slate-900 text-xs font-bold px-3 py-1.5 rounded transition-all shadow-md active:scale-95"
@@ -244,14 +383,63 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Inline search bar */}
+      {showSearch && (
+        <div className="mb-3 relative flex items-center animate-in slide-in-from-top-2 duration-200">
+          <Search size={14} className="absolute left-3 text-[var(--notion-text-light)] pointer-events-none" />
+          <input
+            autoFocus
+            type="text"
+            placeholder="Rechercher par nom, produit, type, initiateur..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Escape' && (setShowSearch(false), setSearchQuery(''))}
+            className="w-full pl-8 pr-8 py-2 text-sm bg-[var(--notion-hover)] border border-[var(--notion-border)] rounded-lg outline-none focus:border-[var(--brand-primary)] text-[var(--notion-text)] placeholder:text-[var(--notion-text-light)] transition-all"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-colors">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Active filter summary */}
+      {(activeFilterCount > 0 || (searchQuery && !showSearch)) && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {searchQuery && !showSearch && (
+            <span className="flex items-center gap-1 text-[11px] font-semibold bg-[var(--notion-hover)] border border-[var(--notion-border)] px-2 py-1 rounded-full text-[var(--notion-text)]">
+              Recherche: "{searchQuery}"
+              <button onClick={() => setSearchQuery('')}><X size={10} /></button>
+            </span>
+          )}
+          {filterStatus.map(s => (
+            <span key={s} className="flex items-center gap-1 text-[11px] font-semibold bg-[var(--brand-primary)] text-white px-2 py-1 rounded-full">
+              {s} <button onClick={() => setFilterStatus(prev => prev.filter(x => x !== s))}><X size={10} /></button>
+            </span>
+          ))}
+          {filterPriority.map(p => (
+            <span key={p} className="flex items-center gap-1 text-[11px] font-semibold bg-amber-500 text-white px-2 py-1 rounded-full">
+              {p} <button onClick={() => setFilterPriority(prev => prev.filter(x => x !== p))}><X size={10} /></button>
+            </span>
+          ))}
+          {filterUrgent && (
+            <span className="flex items-center gap-1 text-[11px] font-semibold bg-rose-500 text-white px-2 py-1 rounded-full">
+              Urgent <button onClick={() => setFilterUrgent(null)}><X size={10} /></button>
+            </span>
+          )}
+          <span className="text-[11px] text-[var(--notion-text-light)]">{displayedProjects.length} résultat{displayedProjects.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
       <div className="min-h-[500px]">
-        {view === 'table' && <TableView projects={projects} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} formFields={deptConfig?.formFields || undefined} theme={theme} t={t} />}
-        {view === 'kanban' && <KanbanView projects={projects} theme={theme} getUserName={getUserName} userRole={userRole} />}
-        {view === 'timeline' && <TimelineView projects={projects} getUserName={getUserName} theme={theme} />}
-        {view === 'calendrier' && <CalendarView projects={projects} />}
-        {view === 'reporting' && <ReportingView projects={projects} />}
-        {view === 'urgences' && <ReportingView projects={projects.filter(p => p.urgent)} />}
-        {view === 'stats' && <StatsView projects={projects} />}
+        {view === 'table' && <TableView projects={displayedProjects} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} formFields={deptConfig?.formFields || undefined} theme={theme} t={t} />}
+        {view === 'kanban' && <KanbanView projects={displayedProjects} theme={theme} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} />}
+        {view === 'timeline' && <TimelineView projects={displayedProjects} getUserName={getUserName} theme={theme} />}
+        {view === 'calendrier' && <CalendarView projects={displayedProjects} />}
+        {view === 'reporting' && <ReportingView projects={displayedProjects} />}
+        {view === 'urgences' && <ReportingView projects={displayedProjects.filter(p => p.urgent)} />}
+        {view === 'stats' && <StatsView projects={displayedProjects} />}
         {view === 'demarrer' && (
           <div className="bg-[var(--notion-bg)] rounded-lg border border-[var(--notion-border)] shadow-sm animate-in slide-in-from-bottom-4 duration-500">
              <ProjectForm />
@@ -369,45 +557,116 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
   );
 };
 
-const KanbanView = ({ projects, theme, getUserName, userRole }: { projects: Project[], theme: string, getUserName: (u: string | User | undefined) => string, userRole: string }) => {
+const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: {
+  projects: Project[],
+  theme: string,
+  getUserName: (u: string | User | undefined) => string,
+  userRole: string,
+  onUpdateStatus: (id: string, status: string) => void
+}) => {
   const columns = ['Nouveau', 'En cours', 'En révision', 'Terminé'];
-  const showWorker = userRole === 'initiateur' || userRole === 'admin';
+  const showAssignee = userRole === 'chef de produit' || userRole === 'chef de projet';
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, projectId: string) => {
+    setDraggedId(projectId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, col: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCol(col);
+  };
+
+  const handleDrop = (e: React.DragEvent, col: string) => {
+    e.preventDefault();
+    if (draggedId) {
+      const project = projects.find(p => p._id === draggedId);
+      if (project && project.status !== col) {
+        onUpdateStatus(draggedId, col);
+      }
+    }
+    setDraggedId(null);
+    setDragOverCol(null);
+  };
+
   return (
     <div className="flex gap-4 overflow-x-auto pb-8 -mx-12 px-12 scrollbar-hide">
       {columns.map(col => {
         const pCol = projects.filter(p => (p.status || 'Nouveau') === col);
+        const isOver = dragOverCol === col && draggedId !== null;
+        const draggedProject = projects.find(p => p._id === draggedId);
+        const isDroppingHere = isOver && draggedProject?.status !== col;
+
         return (
-          <div key={col} className="min-w-[280px] flex-1">
+          <div
+            key={col}
+            className="min-w-[280px] flex-1 flex flex-col"
+            onDragOver={(e) => handleDragOver(e, col)}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null);
+            }}
+            onDrop={(e) => handleDrop(e, col)}
+          >
+            {/* Column header */}
             <div className="flex items-center gap-2 mb-2 px-2">
               <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide ${getStatusColor(col, theme)}`}>
                 {col}
               </span>
               <span className="text-[var(--notion-text-light)] text-xs font-medium">{pCol.length}</span>
             </div>
-            <div className="space-y-2">
-              {pCol.map(p => (
-                <div key={p._id} className="bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-md shadow-sm p-3 hover:shadow-md transition-shadow cursor-pointer group">
-                  <div className="flex items-center gap-2 mb-2 text-sm font-medium text-[var(--notion-text)]">
-                    <FileIcon />
-                    {p.name}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mt-3 justify-between items-center">
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getPriorityColor(p.priority, theme)}`}>
-                        {p.priority}
-                      </span>
-                      <span className="text-[10px] text-[var(--notion-text-light)] bg-[var(--notion-hover)] px-1.5 py-0.5 rounded">
-                        {p.product}
-                      </span>
+
+            {/* Drop zone */}
+            <div className={`space-y-2 flex-1 rounded-xl p-1 min-h-[80px] transition-all duration-150 ${isDroppingHere ? 'bg-[var(--brand-primary)]/5 ring-2 ring-[var(--brand-primary)] ring-dashed' : ''}`}>
+              {pCol.map(p => {
+                const isDragging = draggedId === p._id;
+                return (
+                  <div
+                    key={p._id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, p._id)}
+                    onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
+                    className={`bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-md shadow-sm p-3 transition-all duration-150 group select-none
+                      ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : 'hover:shadow-md cursor-grab active:cursor-grabbing active:scale-[0.98]'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2 text-sm font-medium text-[var(--notion-text)]">
+                      <FileIcon />
+                      <span className="truncate">{p.name}</span>
                     </div>
-                    {showWorker && p.assignedTo && (
-                      <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-100 px-1.5 py-0.5 rounded text-[10px] font-medium border border-blue-200 dark:border-blue-500/30">
-                        {getUserName(p.assignedTo)}
-                      </span>
-                    )}
+                    <div className="flex flex-wrap gap-1.5 mt-3 justify-between items-center">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getPriorityColor(p.priority, theme)}`}>
+                          {p.priority}
+                        </span>
+                        {p.product && (
+                          <span className="text-[10px] text-[var(--notion-text-light)] bg-[var(--notion-hover)] px-1.5 py-0.5 rounded">
+                            {p.product}
+                          </span>
+                        )}
+                        {p.urgent && (
+                          <span className="text-[10px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                            Urgent
+                          </span>
+                        )}
+                      </div>
+                      {showAssignee && p.assignedTo && (
+                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-100 px-1.5 py-0.5 rounded text-[10px] font-medium border border-blue-200 dark:border-blue-500/30">
+                          {getUserName(p.assignedTo)}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                );
+              })}
+
+              {/* Empty column drop hint */}
+              {pCol.length === 0 && (
+                <div className={`h-16 rounded-lg border-2 border-dashed flex items-center justify-center text-[11px] font-medium transition-all ${isDroppingHere ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)]'}`}>
+                  {isDroppingHere ? 'Déposer ici' : 'Aucune carte'}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         );

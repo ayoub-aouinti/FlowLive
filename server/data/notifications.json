@@ -106,5 +106,14 @@
     "link": "/table",
     "read": false,
     "createdAt": "2026-06-04T14:38:00.025Z"
+  },
+  {
+    "id": "notif_1782135929805yk0mt",
+    "userId": "init_1",
+    "title": "Mise à jour du statut",
+    "message": "Le statut du projet \"dev\" est passé à \"En cours\"",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-06-22T13:45:29.805Z"
   }
 ]

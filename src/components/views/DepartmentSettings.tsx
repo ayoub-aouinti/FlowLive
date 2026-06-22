@@ -565,8 +565,8 @@ export function DepartmentSettings() {
                         className="bg-[var(--notion-bg)] text-[var(--notion-text)] border border-[var(--notion-border)] rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-tighter outline-none focus:border-[var(--brand-accent)] appearance-none pr-6 cursor-pointer shadow-sm hover:shadow-md transition-all"
                       >
                         <option value="worker">Worker</option>
-                        <option value="initiateur">Initiateur</option>
-                        <option value="admin">Admin</option>
+                        <option value="chef de produit">Chef de produit</option>
+                        <option value="chef de projet">Chef de projet</option>
                       </select>
                       <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40" />
                     </div>
@@ -635,7 +635,7 @@ export function DepartmentSettings() {
                     className="w-full text-sm px-4 py-3 bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-xl outline-none focus:border-[var(--brand-accent)] appearance-none cursor-pointer font-bold uppercase tracking-tighter"
                   >
                     <option value="worker">Worker</option>
-                    <option value="initiateur">Initiateur</option>
+                    <option value="chef de produit">Chef de produit</option>
                   </select>
                   <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--notion-text-light)]" />
                 </div>

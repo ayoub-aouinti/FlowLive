@@ -72,7 +72,7 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
   };
 
   const user = token ? JSON.parse(atob(token.split('.')[1])) : null;
-  const canEdit = user?.role === 'admin' || user?.role === 'superadmin';
+  const canEdit = user?.role === 'chef de projet' || user?.role === 'superadmin';
 
   const isRtl = i18n.language === 'ar';
 
