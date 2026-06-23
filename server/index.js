@@ -711,8 +711,8 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       
       if (req.user.role === 'chef de projet') {
         filteredUsers = users.filter(u => u.departmentId === req.user.departmentId);
-      } else if (req.user.role === 'chef de produit') {
-        filteredUsers = users.filter(u => u.departmentId === req.user.departmentId && u.role === 'worker');
+      } else if (req.user.role === 'chef de produit' || req.user.role === 'worker') {
+        filteredUsers = users.filter(u => u.departmentId === req.user.departmentId);
       }
 
       res.json(filteredUsers.map(u => ({ name: u.name, role: u.role, _id: u.id, email: u.email })));
@@ -784,6 +784,61 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// ─── LEAVES (congés) ──────────────────────────────────────────────────────────
+app.get('/api/leaves', authenticateToken, async (req, res) => {
+  try {
+    const leaves = readLocal('leaves.json');
+    // All roles can see their dept's leaves
+    const filtered = leaves.filter(l => l.departmentId === req.user.departmentId);
+    res.json(filtered);
+  } catch (error) { res.status(500).json({ message: error.message }); }
+});
+
+app.post('/api/leaves', authenticateToken, async (req, res) => {
+  try {
+    const { userId, startDate, endDate, type } = req.body;
+    if (!userId || !startDate || !endDate) return res.status(400).json({ message: 'Champs manquants' });
+    // Workers can only create leaves for themselves
+    const isSelf = userId === req.user.id || userId === req.user._id;
+    if (req.user.role === 'worker' && !isSelf) return res.status(403).json({ message: 'Access denied' });
+
+    const users = readLocal('users.json');
+    const targetUser = users.find(u => u.id === userId || u._id === userId);
+
+    const leaves = readLocal('leaves.json');
+    const newLeave = {
+      id: `leave_${Date.now()}`,
+      userId,
+      userName: targetUser?.name || '',
+      departmentId: req.user.departmentId,
+      startDate,
+      endDate,
+      type: type || 'congé',
+      createdAt: new Date().toISOString()
+    };
+    leaves.push(newLeave);
+    writeLocal('leaves.json', leaves);
+    res.json(newLeave);
+  } catch (error) { res.status(500).json({ message: error.message }); }
+});
+
+app.delete('/api/leaves/:id', authenticateToken, async (req, res) => {
+  try {
+    let leaves = readLocal('leaves.json');
+    const leave = leaves.find(l => l.id === req.params.id);
+    if (!leave) return res.status(404).json({ message: 'Not found' });
+    // Workers can only delete their own; chef de projet can delete any in their dept
+    const isSelf = leave.userId === req.user.id || leave.userId === req.user._id;
+    if (req.user.role === 'worker' && !isSelf) return res.status(403).json({ message: 'Access denied' });
+    if (leave.departmentId !== req.user.departmentId) return res.status(403).json({ message: 'Access denied' });
+
+    leaves = leaves.filter(l => l.id !== req.params.id);
+    writeLocal('leaves.json', leaves);
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ message: error.message }); }
+});
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Socket.io connection handling
 io.on('connection', (socket) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../services/socket';
-import { X, AlertCircle, ChevronDown, Paperclip } from 'lucide-react';
+import { X, AlertCircle, ChevronDown, Paperclip, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import type { User } from '../types';
@@ -40,6 +40,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
   const [config, setConfig] = useState<DeptConfig>({ products: [], types: [] });
   const [fieldValues, setFieldValues] = useState<Record<string, string | boolean>>({});
   const [projectName, setProjectName] = useState('');
+  const [estimatedHours, setEstimatedHours] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,12 +98,15 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
       else payload[f.id] = val;
     });
 
+    payload['estimatedHours'] = parseFloat(estimatedHours);
+
     payload['_customFields'] = Object.fromEntries(
       fields.map(f => [f.id, getFieldValue(f)])
     );
 
     socket.emit('new_project', payload);
     setProjectName('');
+    setEstimatedHours('');
     setFieldValues({});
     if (onClose) onClose();
     // Use a custom event or toast instead of alert for premium feel
@@ -272,6 +276,29 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
             autoFocus
           />
           <div className="h-1 w-20 bg-[var(--brand-accent)] rounded-full opacity-50" />
+        </div>
+
+        {/* Fixed required field: estimated hours */}
+        <div className="grid grid-cols-[180px_1fr] items-center py-2 group/row hover:bg-[var(--notion-hover)]/30 rounded-xl px-2 -mx-2 transition-colors">
+          <div className="flex items-center gap-2.5 text-[var(--notion-text-light)] text-sm font-bold opacity-60 group-hover/row:opacity-100 transition-all">
+            <Clock size={14} />
+            <span>Estimation</span>
+            <span className="text-[var(--brand-accent)] text-xs">*</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="0.5"
+              max="99"
+              step="0.5"
+              required
+              value={estimatedHours}
+              onChange={e => setEstimatedHours(e.target.value)}
+              placeholder="ex: 4"
+              className="px-2.5 py-1.5 text-sm text-[var(--notion-text)] hover:bg-[var(--notion-hover)] rounded-lg transition-all bg-transparent outline-none focus:bg-[var(--notion-hover)] font-bold w-28 border border-transparent focus:border-[var(--brand-accent)]/20"
+            />
+            <span className="text-xs text-[var(--notion-text-light)] font-medium">heures</span>
+          </div>
         </div>
 
         <div className="space-y-2">

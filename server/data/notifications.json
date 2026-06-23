@@ -250,5 +250,14 @@
     "link": "/table",
     "read": false,
     "createdAt": "2026-06-22T23:30:53.241Z"
+  },
+  {
+    "id": "notif_1782209649605g4nj1",
+    "userId": "user_1",
+    "title": "Nouveau projet assigné",
+    "message": "On vous a assigné le projet: test 22",
+    "link": "/table",
+    "read": false,
+    "createdAt": "2026-06-23T10:14:09.605Z"
   }
 ]

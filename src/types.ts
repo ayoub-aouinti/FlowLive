@@ -50,7 +50,19 @@ export interface Project {
   assignedTo?: string | User;
   createdAt: string;
   departmentId?: string;
+  estimatedHours?: number;
   _customFields?: Record<string, unknown>;
+}
+
+export interface Leave {
+  id: string;
+  userId: string;
+  userName?: string;
+  departmentId: string;
+  startDate: string;
+  endDate: string;
+  type: 'congé' | 'maladie' | 'autre';
+  createdAt?: string;
 }
 
 export type ViewType = 
