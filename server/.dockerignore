@@ -1,0 +1,9 @@
+# Server .dockerignore — applies when building the BACKEND image (context = ./server)
+node_modules/
+.env
+.env.*
+!.env.example
+*.md
+migrate.js
+seedUsers.js
+test-*.js

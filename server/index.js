@@ -5,27 +5,21 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('./models/User'); 
-const fs = require('fs');
-const path = require('path');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 require('dotenv').config();
 
-const USE_LOCAL_DB = process.env.USE_LOCAL_DB === 'true';
-const DATA_DIR = path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
-
-const readLocal = (file) => JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), 'utf8'));
-const writeLocal = (file, data) => fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
+const User = require('./models/User');
+const Department = require('./models/Department');
+const Project = require('./models/Project');
+const Notification = require('./models/Notification');
+const Invitation = require('./models/Invitation');
+const Leave = require('./models/Leave');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "*",
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: process.env.FRONTEND_URL || '*', methods: ['GET', 'POST'] }
 });
 
 const allowedOrigins = [
@@ -36,88 +30,32 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) callback(null, true);
+    else callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// MongoDB Connection (Skip if local)
-let transporter;
-if (!USE_LOCAL_DB) {
-  const mongoOptions = {
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 10000,
-  };
+// Add id = _id for frontend compatibility (lean() drops virtuals)
+const withId = (doc) => (doc ? { ...doc, id: doc._id } : null);
+const withIds = (arr) => (arr || []).map(withId);
 
-  console.log('📡 Connecting to MongoDB Atlas...');
-  mongoose.connect(process.env.MONGODB_URI, mongoOptions)
-    .then(() => console.log('✅ Connected to MongoDB Atlas'))
-    .catch(err => {
-      console.error('❌ MongoDB connection error:', err.message);
-      console.log('💡 Tip: Check your MONGODB_URI and Network Access (Whitelist 0.0.0.0/0)');
-    });
-}
-
-transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
   port: parseInt(process.env.EMAIL_PORT, 10) || 587,
-  secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
+  secure: process.env.EMAIL_PORT === '465',
   auth: {
     user: process.env.EMAIL_USER || 'placeholder@ethereal.email',
     pass: process.env.EMAIL_PASS || 'placeholder'
   }
 });
 
-let Project;
-if (!USE_LOCAL_DB) {
-  const projectSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    initiatorName: { type: String, required: true },
-    description: { type: String, required: true },
-    type: { type: String, required: true },
-    product: { type: String, required: true },
-    status: { type: String, default: 'Nouveau' },
-    priority: { type: String, default: 'Moyenne' },
-    urgent: { type: Boolean, default: false },
-    deadline: { type: Date, required: true },
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    createdAt: { type: Date, default: Date.now }
-  });
-  Project = mongoose.model('Project', projectSchema);
-} else {
-  // Local Project Mock
-  Project = {
-    find: async (query) => {
-      let data = readLocal('projects.json');
-      if (query.$or) {
-        const userId = query.$or[0].assignedTo;
-        const userName = query.$or[1].initiatorName;
-        data = data.filter(p => p.assignedTo === userId || p.initiatorName === userName);
-      }
-      return data;
-    },
-    save: async (data) => {
-      const projects = readLocal('projects.json');
-      const newProject = { ...data, _id: Date.now().toString(), status: data.status || 'Nouveau', createdAt: new Date() };
-      projects.push(newProject);
-      writeLocal('projects.json', projects);
-      return newProject;
-    }
-  };
-}
-
-// AUTH MIDDLEWARE
+// ── AUTH MIDDLEWARE ───────────────────────────────────────────────────────────
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = (req.headers['authorization'] || '').split(' ')[1];
   if (!token) return res.sendStatus(401);
-
   jwt.verify(token, process.env.JWT_SECRET || 'secret_key', (err, user) => {
     if (err) return res.sendStatus(403);
     req.user = user;
@@ -125,220 +63,69 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-const authorizeRole = (roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Access denied: Insufficient permissions' });
-    }
-    next();
-  };
-};
-
-// AUTH ROUTES
-
+// ── AUTH ROUTES ───────────────────────────────────────────────────────────────
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    let user;
+    const user = await User.findOne({ email }).lean();
+    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
-    if (USE_LOCAL_DB) {
-      const users = readLocal('users.json');
-      const foundUser = users.find(u => u.email === email);
-      if (!foundUser) return res.status(400).json({ message: 'Invalid credentials' });
-      
-      const isMatch = await bcrypt.compare(password, foundUser.password);
-      if (!isMatch) {
-         // Fallback for non-hashed legacy passwords (like "password123")
-         if (password !== foundUser.password) {
-           return res.status(400).json({ message: 'Invalid credentials' });
-         }
-      }
-      user = foundUser;
-      user.id = user.id || Date.now().toString(); 
-    } else {
-      user = await User.findOne({ email });
-      if (!user || !(await user.comparePassword(password))) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
+    const isMatch = await bcrypt.compare(password, user.password).catch(() => false);
+    if (!isMatch && password !== user.password) {
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const token = jwt.sign(
-      { id: user._id || user.id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId },
+      { id: user._id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId },
       process.env.JWT_SECRET || 'secret_key',
       { expiresIn: '8h' }
     );
-
-    res.json({ 
-      token, 
-      user: { id: user._id || user.id, _id: user._id || user.id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId } 
+    res.json({
+      token,
+      user: { id: user._id, _id: user._id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId }
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-// MULTI-TENANCY ROUTES (DEPARTMENTS)
-app.get('/api/departments', authenticateToken, async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
-    const departments = readLocal('departments.json');
-    res.json(departments);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.post('/api/departments', authenticateToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
-    const departments = readLocal('departments.json');
-    const newDept = { 
-       ...req.body, 
-       id: 'dept_' + Date.now().toString(), 
-       products: [], 
-       types: [],
-       activePages: req.body.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
-       pageConfigs: {}
-    };
-    // Check if admin user exists, if not send invitation
-    const users = readLocal('users.json');
-    const existingUser = users.find(u => u.email === newDept.adminId);
-    
-    if (!existingUser) {
-      console.log(`👤 Creating invitation for new admin: ${newDept.adminId}`);
-      const token = crypto.randomBytes(32).toString('hex');
-      const invitations = readLocal('invitations.json');
-      invitations.push({
-        email: newDept.adminId,
-        role: 'chef de projet',
-        departmentId: newDept.id,
-        token: token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-      });
-      writeLocal('invitations.json', invitations);
-
-      const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
-
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || '"WorkPlan System" <noreply@workplan.com>',
-        to: newDept.adminId,
-        subject: 'Invitation à rejoindre WorkPlan',
-        html: `
-          <h1>Bienvenue sur WorkPlan</h1>
-          <p>Vous avez été invité à gérer le département <b>${newDept.name}</b>.</p>
-          <p>Cliquez sur le lien ci-dessous pour configurer votre compte :</p>
-          <a href="${signupLink}" style="padding: 10px 20px; background: #1a4f8b; color: white; text-decoration: none; border-radius: 5px;">Configurer mon compte</a>
-        `
-      };
-
-      transporter.sendMail(mailOptions).catch(err => {
-        console.error('📧 Error sending email:', err.message);
-        console.log('🔗 Signup Link (Manual):', signupLink);
-      });
-    } else {
-      // Upgrade existing user to Admin for this department
-      const userIndex = users.findIndex(u => u.email === newDept.adminId);
-      if (userIndex !== -1) {
-        users[userIndex].role = 'chef de projet';
-        users[userIndex].departmentId = newDept.id;
-        writeLocal('users.json', users);
-        console.log(`✅ Existing user ${newDept.adminId} upgraded to Admin`);
-      }
+    const { email, password, name } = req.body;
+    if (await User.findOne({ email }).lean()) {
+      return res.status(400).json({ message: 'Cet email est déjà utilisé' });
     }
-
-    departments.push(newDept);
-    writeLocal('departments.json', departments);
-    res.status(201).json(newDept);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    await new User({
+      _id: `user_${Date.now()}`,
+      name, email,
+      password: await bcrypt.hash(password, 10),
+      role: 'worker',
+      isVerified: true
+    }).save();
+    res.status(201).json({ message: 'Inscription réussie ! Vous pouvez maintenant vous connecter.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-app.put('/api/departments/:id', authenticateToken, async (req, res) => {
+app.get('/api/auth/verify-email/:token', async (req, res) => {
   try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
-    const { id } = req.params;
-    const { name, adminId, activePages } = req.body;
-    
-    let departments = readLocal('departments.json');
-    const deptIndex = departments.findIndex(d => d.id === id);
-    if (deptIndex === -1) return res.status(404).json({ message: 'Department not found' });
-
-    const oldAdminId = departments[deptIndex].adminId;
-    
-    // Update basic info
-    departments[deptIndex].name = name || departments[deptIndex].name;
-    departments[deptIndex].activePages = activePages || departments[deptIndex].activePages;
-    
-    // Handle Admin change if provided
-    if (adminId && adminId !== oldAdminId) {
-      departments[deptIndex].adminId = adminId;
-      
-      const users = readLocal('users.json');
-      const newAdmin = users.find(u => u.email === adminId);
-      
-      if (newAdmin) {
-        // Upgrade existing user to chef de projet for this dept
-        const userIdx = users.findIndex(u => u.email === adminId);
-        users[userIdx].role = 'chef de projet';
-        users[userIdx].departmentId = id;
-        writeLocal('users.json', users);
-        console.log(`✅ User ${adminId} upgraded to Chef de Projet via Edit`);
-      } else {
-        // Create invitation for new email
-        console.log(`👤 Creating invitation for new chef de projet (Edit): ${adminId}`);
-        const token = crypto.randomBytes(32).toString('hex');
-        const invitations = readLocal('invitations.json');
-        invitations.push({
-          email: adminId,
-          role: 'chef de projet',
-          departmentId: id,
-          token: token,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        });
-        writeLocal('invitations.json', invitations);
-
-        const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
-        const mailOptions = {
-          from: process.env.EMAIL_FROM || '"WorkPlan System" <noreply@workplan.com>',
-          to: adminId,
-          subject: 'Invitation à gérer un département sur WorkPlan',
-          html: `<h1>Bienvenue sur WorkPlan</h1><p>Vous avez été désigné administrateur pour <b>${name}</b>.</p><a href="${signupLink}">Configurer mon compte</a>`
-        };
-        transporter.sendMail(mailOptions).catch(e => console.error('📧 Email Error:', e.message));
-      }
-    }
-
-    writeLocal('departments.json', departments);
-    res.json(departments[deptIndex]);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const user = await User.findOneAndUpdate(
+      { verificationToken: req.params.token },
+      { isVerified: true, $unset: { verificationToken: '' } }
+    ).lean();
+    if (!user) return res.status(404).json({ message: 'Lien invalide ou expiré' });
+    res.json({ message: 'Email vérifié avec succès ! Vous pouvez maintenant vous connecter.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-app.delete('/api/departments/:id', authenticateToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
-    let departments = readLocal('departments.json');
-    departments = departments.filter(d => d.id !== req.params.id);
-    writeLocal('departments.json', departments);
-    res.json({ message: 'Department deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// INVITATION COMPLETION
 app.get('/api/invitations/verify/:token', async (req, res) => {
   try {
-    const invitations = readLocal('invitations.json');
-    const invite = invitations.find(i => i.token === req.params.token);
-    
+    const invite = await Invitation.findOne({ token: req.params.token }).lean();
     if (!invite) return res.status(404).json({ message: 'Lien invalide ou expiré' });
-    if (new Date(invite.expiresAt) < new Date()) {
-      return res.status(400).json({ message: 'Invitation expirée' });
-    }
-    
+    if (new Date(invite.expiresAt) < new Date()) return res.status(400).json({ message: 'Invitation expirée' });
     res.json({ email: invite.email, role: invite.role });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -348,83 +135,145 @@ app.get('/api/invitations/verify/:token', async (req, res) => {
 app.post('/api/auth/complete-signup', async (req, res) => {
   try {
     const { token, password, name } = req.body;
-    let invitations = readLocal('invitations.json');
-    const index = invitations.findIndex(i => i.token === token);
-    
-    if (index === -1) return res.status(404).json({ message: 'Invitation non trouvée' });
-    const invite = invitations[index];
+    const invite = await Invitation.findOne({ token }).lean();
+    if (!invite) return res.status(404).json({ message: 'Invitation non trouvée' });
 
-    const users = readLocal('users.json');
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const newUser = {
-      id: `user_${Date.now()}`,
-      name: name,
-      email: invite.email,
-      password: hashedPassword,
+    await new User({
+      _id: `user_${Date.now()}`,
+      name, email: invite.email,
+      password: await bcrypt.hash(password, 10),
       role: invite.role,
       departmentId: invite.departmentId,
-      createdAt: new Date()
-    };
-    
-    users.push(newUser);
-    writeLocal('users.json', users);
-
-    // Remove invitation
-    invitations.splice(index, 1);
-    writeLocal('invitations.json', invitations);
-
+      isVerified: true
+    }).save();
+    await Invitation.deleteOne({ token });
     res.json({ message: 'Compte créé avec succès !' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// PUBLIC SIGNUP & VERIFICATION
-app.post('/api/auth/register', async (req, res) => {
+// ── DEPARTMENTS ───────────────────────────────────────────────────────────────
+app.get('/api/departments', authenticateToken, async (req, res) => {
   try {
-    const { email, password, name } = req.body;
-    const users = readLocal('users.json');
-    
-    if (users.find(u => u.email === email)) {
-      return res.status(400).json({ message: 'Cet email est déjà utilisé' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    
-    const newUser = {
-      id: `user_${Date.now()}`,
-      name,
-      email,
-      password: hashedPassword,
-      role: 'worker', // Default role for public signup
-      isVerified: true,
-      createdAt: new Date()
-    };
-    
-    users.push(newUser);
-    writeLocal('users.json', users);
-
-    res.status(201).json({ message: 'Inscription réussie ! Vous pouvez maintenant vous connecter.' });
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    const depts = await Department.find().lean();
+    res.json(withIds(depts));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-app.get('/api/auth/verify-email/:token', async (req, res) => {
+// must be defined before /:id routes
+app.get('/api/departments/my-config', authenticateToken, async (req, res) => {
   try {
-    const { token } = req.params;
-    let users = readLocal('users.json');
-    const index = users.findIndex(u => u.verificationToken === token);
-    
-    if (index === -1) return res.status(404).json({ message: 'Lien de vérification invalide ou expiré' });
-    
-    users[index].isVerified = true;
-    delete users[index].verificationToken;
-    writeLocal('users.json', users);
+    let dept = null;
+    if (req.user.role === 'superadmin' && req.query.departmentId) {
+      dept = await Department.findById(req.query.departmentId).lean();
+    } else {
+      dept = await Department.findById(req.user.departmentId).lean();
+      if (!dept && req.user.role === 'chef de projet') {
+        dept = await Department.findOne({ adminId: req.user.email }).lean();
+      }
+    }
+    if (!dept) return res.json({ products: [], types: [] });
+    res.json({
+      departmentId: dept._id,
+      departmentName: dept.name,
+      products: dept.products || [],
+      types: dept.types || [],
+      activePages: dept.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+      pageConfigs: dept.pageConfigs || {},
+      formFields: dept.formFields || null,
+      coverUrl: dept.coverUrl || null,
+      logoUrl: dept.logoUrl || null
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
-    res.json({ message: 'Email vérifié avec succès ! Vous pouvez maintenant vous connecter.' });
+app.get('/api/departments/members-status', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
+    const [users, invitations] = await Promise.all([
+      User.find({ departmentId: req.user.departmentId }).lean(),
+      Invitation.find({ departmentId: req.user.departmentId }).lean()
+    ]);
+    res.json([
+      ...users.map(u => ({ ...u, id: u._id, status: 'Inscrit' })),
+      ...invitations.map(i => ({ ...i, id: i.token, _id: i.token, status: 'En attente', name: i.email.split('@')[0], isInvitation: true }))
+    ]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/departments', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    const deptId = 'dept_' + Date.now();
+    const newDept = await new Department({
+      _id: deptId,
+      ...req.body,
+      products: [],
+      types: [],
+      activePages: req.body.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+      pageConfigs: {}
+    }).save();
+
+    const existingUser = await User.findOne({ email: req.body.adminId }).lean();
+    if (!existingUser) {
+      const tok = crypto.randomBytes(32).toString('hex');
+      await new Invitation({ _id: tok, email: req.body.adminId, role: 'chef de projet', departmentId: deptId, token: tok, expiresAt: new Date(Date.now() + 7 * 24 * 3600000) }).save();
+      const link = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${tok}`;
+      console.log(`📧 Invitation link: ${link}`);
+      transporter.sendMail({ from: process.env.EMAIL_FROM, to: req.body.adminId, subject: 'Invitation WorkPlan', html: `<a href="${link}">Configurer mon compte</a>` })
+        .catch(e => console.error('📧', e.message));
+    } else {
+      await User.findByIdAndUpdate(existingUser._id, { role: 'chef de projet', departmentId: deptId });
+    }
+    res.status(201).json(withId(newDept.toObject()));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.put('/api/departments/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    const dept = await Department.findById(req.params.id).lean();
+    if (!dept) return res.status(404).json({ message: 'Department not found' });
+    const { name, adminId, activePages } = req.body;
+    const patch = {};
+    if (name) patch.name = name;
+    if (activePages) patch.activePages = activePages;
+
+    if (adminId && adminId !== dept.adminId) {
+      patch.adminId = adminId;
+      const u = await User.findOne({ email: adminId }).lean();
+      if (u) {
+        await User.findByIdAndUpdate(u._id, { role: 'chef de projet', departmentId: req.params.id });
+      } else {
+        const tok = crypto.randomBytes(32).toString('hex');
+        await new Invitation({ _id: tok, email: adminId, role: 'chef de projet', departmentId: req.params.id, token: tok, expiresAt: new Date(Date.now() + 7 * 24 * 3600000) }).save();
+        const link = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${tok}`;
+        transporter.sendMail({ from: process.env.EMAIL_FROM, to: adminId, subject: 'Invitation WorkPlan', html: `<a href="${link}">Configurer</a>` })
+          .catch(e => console.error('📧', e.message));
+      }
+    }
+    const updated = await Department.findByIdAndUpdate(req.params.id, { $set: patch }, { new: true }).lean();
+    res.json(withId(updated));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.delete('/api/departments/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Access denied' });
+    await Department.deleteOne({ _id: req.params.id });
+    res.json({ message: 'Department deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -432,213 +281,24 @@ app.get('/api/auth/verify-email/:token', async (req, res) => {
 
 app.put('/api/departments/:id/config', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'chef de projet') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-    const departments = readLocal('departments.json');
-    const index = departments.findIndex(d => d.id === req.params.id);
-    if (index === -1) return res.status(404).json({ message: 'Department not found' });
-
-    // Allow: the chef de projet's token departmentId matches, OR they are listed as adminId of the dept
-    const dept = departments[index];
-    const isAuthorized = req.user.departmentId === req.params.id || dept.adminId === req.user.email;
-    if (!isAuthorized) {
-      return res.status(403).json({ message: 'Not authorized for this department' });
-    }
-
-    if (req.body.products) departments[index].products = req.body.products;
-    if (req.body.types) departments[index].types = req.body.types;
-    if (req.body.pageConfigs) departments[index].pageConfigs = req.body.pageConfigs;
-    if (req.body.formFields) departments[index].formFields = req.body.formFields;
-    if (req.body.coverUrl !== undefined) departments[index].coverUrl = req.body.coverUrl;
-    if (req.body.logoUrl !== undefined) departments[index].logoUrl = req.body.logoUrl;
-    
-    writeLocal('departments.json', departments);
-    res.json(departments[index]);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.get('/api/departments/my-config', authenticateToken, async (req, res) => {
-  try {
-    const departments = readLocal('departments.json');
-    // Primary: look up by departmentId in token
-    // Fallback: find the first department where this user is adminId (by email)
-    let dept;
-    if (req.user.role === 'superadmin' && req.query.departmentId) {
-      dept = departments.find(d => d.id === req.query.departmentId);
-    } else {
-      dept = departments.find(d => d.id === req.user.departmentId);
-      if (!dept && req.user.role === 'chef de projet') {
-        dept = departments.find(d => d.adminId === req.user.email);
-      }
-    }
-    if (!dept) return res.json({ products: [], types: [] });
-    res.json({ 
-       departmentId: dept.id,
-       departmentName: dept.name,
-       products: dept.products || [], 
-       types: dept.types || [],
-       activePages: dept.activePages || ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
-       pageConfigs: dept.pageConfigs || {},
-       formFields: dept.formFields || null,
-       coverUrl: dept.coverUrl || null,
-       logoUrl: dept.logoUrl || null
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// NOTIFICATION ROUTES
-app.get('/api/notifications', authenticateToken, async (req, res) => {
-  try {
-    const notifications = readLocal('notifications.json');
-    const userNotifications = notifications
-      .filter(n => n.userId === req.user.id)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    res.json(userNotifications);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
-  try {
-    const notifications = readLocal('notifications.json');
-    const index = notifications.findIndex(n => n.id === req.params.id && n.userId === req.user.id);
-    if (index !== -1) {
-      notifications[index].read = true;
-      writeLocal('notifications.json', notifications);
-    }
-    res.json({ message: 'Notification marked as read' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
-  try {
-    const notifications = readLocal('notifications.json');
-    notifications.forEach(n => {
-      if (n.userId === req.user.id) n.read = true;
-    });
-    writeLocal('notifications.json', notifications);
-    res.json({ message: 'All notifications marked as read' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.delete('/api/notifications/:id', authenticateToken, async (req, res) => {
-  try {
-    let notifications = readLocal('notifications.json');
-    notifications = notifications.filter(n => !(n.id === req.params.id && n.userId === req.user.id));
-    writeLocal('notifications.json', notifications);
-    res.json({ message: 'Notification deleted' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Helper to create notifications
-const createNotification = (userId, title, message, link = null) => {
-  try {
-    const notifications = readLocal('notifications.json');
-    const newNotif = {
-      id: 'notif_' + Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      userId,
-      title,
-      message,
-      link,
-      read: false,
-      createdAt: new Date().toISOString()
-    };
-    notifications.push(newNotif);
-    writeLocal('notifications.json', notifications);
-    io.emit('notification_added', newNotif);
-    return newNotif;
-  } catch (err) {
-    console.error('Error creating notification:', err);
-  }
-};
-app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
-  try {
     if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
-    const { emails, role } = req.body; // emails is an array
-    if (!emails || !Array.isArray(emails)) return res.status(400).json({ message: 'Liste d\'emails invalide' });
+    const dept = await Department.findById(req.params.id).lean();
+    if (!dept) return res.status(404).json({ message: 'Department not found' });
+    if (req.user.departmentId !== req.params.id && dept.adminId !== req.user.email)
+      return res.status(403).json({ message: 'Not authorized for this department' });
 
-    const invitations = readLocal('invitations.json');
-    const results = { invited: [], assigned: [], skipped: [] };
+    const patch = {};
+    if (req.body.products) patch.products = req.body.products;
+    if (req.body.types) patch.types = req.body.types;
+    if (req.body.pageConfigs) patch.pageConfigs = req.body.pageConfigs;
+    if (req.body.formFields) patch.formFields = req.body.formFields;
+    if (req.body.coverUrl !== undefined) patch.coverUrl = req.body.coverUrl;
+    if (req.body.logoUrl !== undefined) patch.logoUrl = req.body.logoUrl;
 
-    for (const email of emails) {
-      const trimmedEmail = email.trim().toLowerCase();
-      if (!trimmedEmail) continue;
-
-      // Check if user already exists in the system
-      const users = readLocal('users.json');
-      const existingUser = users.find(u => u.email === trimmedEmail);
-      if (existingUser) {
-        if (existingUser.departmentId === req.user.departmentId) {
-          // Already in this department
-          results.skipped.push({ email: trimmedEmail, reason: 'Déjà membre de ce département' });
-        } else {
-          // Exists in another dept (or no dept) → assign directly, no email needed
-          const userIndex = users.findIndex(u => u.email === trimmedEmail);
-          users[userIndex].departmentId = req.user.departmentId;
-          if (role) users[userIndex].role = role;
-          writeLocal('users.json', users);
-          results.assigned.push({ email: trimmedEmail, name: existingUser.name });
-        }
-        continue;
-      }
-      if (invitations.find(i => i.email === trimmedEmail && i.departmentId === req.user.departmentId)) {
-        results.skipped.push({ email: trimmedEmail, reason: 'Invitation déjà envoyée' });
-        continue;
-      }
-
-      const token = crypto.randomBytes(32).toString('hex');
-      const invite = {
-        email: trimmedEmail,
-        role: role || 'worker',
-        departmentId: req.user.departmentId,
-        token: token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      };
-      invitations.push(invite);
-      results.invited.push(trimmedEmail);
-
-      // Send Email
-      const signupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${token}`;
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || '"WorkPlan System" <noreply@workplan.com>',
-        to: trimmedEmail,
-        subject: 'Invitation à rejoindre WorkPlan',
-        html: `
-          <div style="font-family: sans-serif; color: #334155; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
-            <h1 style="color: #1e293b;">Bienvenue sur WorkPlan</h1>
-            <p>Vous avez été invité par l'administrateur de votre département à rejoindre la plateforme.</p>
-            <p>Cliquez sur le lien ci-dessous pour configurer votre compte (Nom & Mot de passe) :</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${signupLink}" style="padding: 12px 24px; background: #1e293b; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Configurer mon compte</a>
-            </div>
-            <p style="font-size: 12px; color: #94a3b8;">Ce lien expire dans 7 jours.</p>
-          </div>
-        `
-      };
-      // Always log the signup link so admin can share it manually during development
-      console.log(`📧 Invitation link for ${trimmedEmail}: ${signupLink}`);
-      transporter.sendMail(mailOptions).catch(err => {
-        console.error(`📧 Email delivery failed for ${trimmedEmail}: ${err.message}`);
-        console.log(`📧 Share this link manually: ${signupLink}`);
-      });
-    }
-
-    writeLocal('invitations.json', invitations);
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const updated = await Department.findByIdAndUpdate(req.params.id, { $set: patch }, { new: true }).lean();
+    res.json(withId(updated));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -646,328 +306,294 @@ app.post('/api/departments/:id/import-resources', authenticateToken, async (req,
   try {
     if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
     const { products, types } = req.body;
-    
-    const departments = readLocal('departments.json');
-    const index = departments.findIndex(d => d.id === req.params.id);
-    if (index === -1) return res.status(404).json({ message: 'Department not found' });
-
-    if (products && Array.isArray(products)) {
-      // Add only unique products
-      const currentProducts = departments[index].products || [];
-      const newProducts = [...new Set([...currentProducts, ...products.map(p => p.trim()).filter(Boolean)])];
-      departments[index].products = newProducts;
-    }
-
-    if (types && Array.isArray(types)) {
-      // Add only unique types
-      const currentTypes = departments[index].types || [];
-      const newTypes = [...new Set([...currentTypes, ...types.map(t => t.trim()).filter(Boolean)])];
-      departments[index].types = newTypes;
-    }
-
-    writeLocal('departments.json', departments);
-    res.json(departments[index]);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const addToSet = {};
+    if (Array.isArray(products)) addToSet.products = { $each: products.map(p => p.trim()).filter(Boolean) };
+    if (Array.isArray(types)) addToSet.types = { $each: types.map(t => t.trim()).filter(Boolean) };
+    const updated = await Department.findByIdAndUpdate(req.params.id, { $addToSet: addToSet }, { new: true }).lean();
+    res.json(withId(updated));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-// REST API for initial load
-app.get('/api/projects', authenticateToken, async (req, res) => {
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
-    let query = {};
-    if (USE_LOCAL_DB) {
-      let projects = readLocal('projects.json');
-      
-      if (req.user.role === 'chef de projet') {
-        projects = projects.filter(p => p.departmentId === req.user.departmentId);
-      } else if (req.user.role === 'chef de produit') {
-        projects = projects.filter(p => p.departmentId === req.user.departmentId && p.initiatorId === req.user.id);
-      } else if (req.user.role === 'worker') {
-        projects = projects.filter(p => p.departmentId === req.user.departmentId && p.assignedTo === req.user.id);
-      } else if (req.user.role === 'superadmin') {
-        if (req.query.departmentId) {
-          projects = projects.filter(p => p.departmentId === req.query.departmentId);
-        } else {
-          // By default Superadmin sees nothing unless a department is selected
-          projects = [];
-        }
-      }
-      
-      projects.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-      return res.json(projects);
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const notifs = await Notification.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
+    res.json(withIds(notifs));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-// GET users list for assignment
+app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    await Notification.updateMany({ userId: req.user.id }, { $set: { read: true } });
+    res.json({ message: 'All notifications marked as read' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    await Notification.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { $set: { read: true } });
+    res.json({ message: 'Notification marked as read' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.delete('/api/notifications/:id', authenticateToken, async (req, res) => {
+  try {
+    await Notification.deleteOne({ _id: req.params.id, userId: req.user.id });
+    res.json({ message: 'Notification deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── USERS ─────────────────────────────────────────────────────────────────────
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
-    if (USE_LOCAL_DB) {
-      const users = readLocal('users.json');
-      let filteredUsers = [];
-      
-      if (req.user.role === 'chef de projet') {
-        filteredUsers = users.filter(u => u.departmentId === req.user.departmentId);
-      } else if (req.user.role === 'chef de produit' || req.user.role === 'worker') {
-        filteredUsers = users.filter(u => u.departmentId === req.user.departmentId);
-      }
-
-      res.json(filteredUsers.map(u => ({ name: u.name, role: u.role, _id: u.id, email: u.email })));
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const users = await User.find({ departmentId: req.user.departmentId }).lean();
+    res.json(users.map(u => ({ name: u.name, role: u.role, _id: u._id, id: u._id, email: u.email })));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
-app.get('/api/departments/members-status', authenticateToken, async (req, res) => {
+
+app.post('/api/users/invite-bulk', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
-    const users = readLocal('users.json').filter(u => u.departmentId === req.user.departmentId);
-    const invitations = readLocal('invitations.json').filter(i => i.departmentId === req.user.departmentId);
-    
-    // Format response
-    const members = [
-      ...users.map(u => ({ ...u, status: 'Inscrit' })),
-      ...invitations.map(i => ({ ...i, status: 'En attente', name: i.email.split('@')[0], _id: i.token, isInvitation: true }))
-    ];
-    
-    res.json(members);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const { emails, role } = req.body;
+    if (!emails || !Array.isArray(emails)) return res.status(400).json({ message: "Liste d'emails invalide" });
+
+    const results = { invited: [], assigned: [], skipped: [] };
+    for (const raw of emails) {
+      const email = raw.trim().toLowerCase();
+      if (!email) continue;
+
+      const existingUser = await User.findOne({ email }).lean();
+      if (existingUser) {
+        if (existingUser.departmentId === req.user.departmentId) {
+          results.skipped.push({ email, reason: 'Déjà membre de ce département' });
+        } else {
+          await User.findByIdAndUpdate(existingUser._id, { departmentId: req.user.departmentId, ...(role ? { role } : {}) });
+          results.assigned.push({ email, name: existingUser.name });
+        }
+        continue;
+      }
+      if (await Invitation.findOne({ email, departmentId: req.user.departmentId }).lean()) {
+        results.skipped.push({ email, reason: 'Invitation déjà envoyée' });
+        continue;
+      }
+      const tok = crypto.randomBytes(32).toString('hex');
+      await new Invitation({ _id: tok, email, role: role || 'worker', departmentId: req.user.departmentId, token: tok, expiresAt: new Date(Date.now() + 7 * 24 * 3600000) }).save();
+      results.invited.push(email);
+
+      const link = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup/${tok}`;
+      console.log(`📧 Invitation link for ${email}: ${link}`);
+      transporter.sendMail({
+        from: process.env.EMAIL_FROM || '"WorkPlan" <noreply@workplan.com>',
+        to: email,
+        subject: 'Invitation à rejoindre WorkPlan',
+        html: `<div style="font-family:sans-serif;max-width:600px;margin:auto;padding:20px"><h1>Bienvenue sur WorkPlan</h1><p>Vous avez été invité à rejoindre la plateforme.</p><div style="text-align:center;margin:30px 0"><a href="${link}" style="padding:12px 24px;background:#1e293b;color:white;text-decoration:none;border-radius:8px;font-weight:bold">Configurer mon compte</a></div><p style="font-size:12px;color:#94a3b8">Ce lien expire dans 7 jours.</p></div>`
+      }).catch(e => { console.error(`📧 Email failed for ${email}:`, e.message); console.log(`📧 Share: ${link}`); });
+    }
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
-    const users = readLocal('users.json');
-    const index = users.findIndex(u => (u._id === req.params.id || u.id === req.params.id) && u.departmentId === req.user.departmentId);
-    
-    if (index === -1) {
-      // Check invitations
-      const invitations = readLocal('invitations.json');
-      const invIndex = invitations.findIndex(i => i.token === req.params.id && i.departmentId === req.user.departmentId);
-      if (invIndex !== -1) {
-        invitations[invIndex] = { ...invitations[invIndex], ...req.body };
-        writeLocal('invitations.json', invitations);
-        return res.json(invitations[invIndex]);
-      }
-      return res.status(404).json({ message: 'User or invitation not found' });
-    }
+    const updated = await User.findOneAndUpdate(
+      { _id: req.params.id, departmentId: req.user.departmentId },
+      { $set: req.body }, { new: true }
+    ).lean();
+    if (updated) return res.json(withId(updated));
 
-    users[index] = { ...users[index], ...req.body };
-    writeLocal('users.json', users);
-    res.json(users[index]);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const inv = await Invitation.findOneAndUpdate(
+      { token: req.params.id, departmentId: req.user.departmentId },
+      { $set: req.body }, { new: true }
+    ).lean();
+    if (inv) return res.json(inv);
+    res.status(404).json({ message: 'User or invitation not found' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
 app.delete('/api/users/:id', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'chef de projet') return res.status(403).json({ message: 'Access denied' });
-
-    // Remove from users
-    let users = readLocal('users.json');
-    users = users.filter(u => !((u._id === req.params.id || u.id === req.params.id) && u.departmentId === req.user.departmentId));
-    writeLocal('users.json', users);
-    
-    // Remove from invitations
-    let invitations = readLocal('invitations.json');
-    invitations = invitations.filter(i => !(i.token === req.params.id && i.departmentId === req.user.departmentId));
-    writeLocal('invitations.json', invitations);
-    
+    await User.deleteOne({ _id: req.params.id, departmentId: req.user.departmentId });
+    await Invitation.deleteOne({ token: req.params.id, departmentId: req.user.departmentId });
     res.json({ message: 'Deleted' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-// ─── LEAVES (congés) ──────────────────────────────────────────────────────────
+// ── PROJECTS ──────────────────────────────────────────────────────────────────
+app.get('/api/projects', authenticateToken, async (req, res) => {
+  try {
+    const { role, id, departmentId } = req.user;
+    let filter = {};
+    if (role === 'chef de projet') filter.departmentId = departmentId;
+    else if (role === 'chef de produit') filter = { departmentId, initiatorId: id };
+    else if (role === 'worker') filter = { departmentId, assignedTo: id };
+    else if (role === 'superadmin') {
+      if (req.query.departmentId) filter.departmentId = req.query.departmentId;
+      else return res.json([]);
+    }
+    const projects = await Project.find(filter).sort({ deadline: 1 }).lean();
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── LEAVES (congés) ───────────────────────────────────────────────────────────
 app.get('/api/leaves', authenticateToken, async (req, res) => {
   try {
-    const leaves = readLocal('leaves.json');
-    // All roles can see their dept's leaves
-    const filtered = leaves.filter(l => l.departmentId === req.user.departmentId);
-    res.json(filtered);
-  } catch (error) { res.status(500).json({ message: error.message }); }
+    const leaves = await Leave.find({ departmentId: req.user.departmentId }).lean();
+    res.json(withIds(leaves));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 app.post('/api/leaves', authenticateToken, async (req, res) => {
   try {
     const { userId, startDate, endDate, type } = req.body;
     if (!userId || !startDate || !endDate) return res.status(400).json({ message: 'Champs manquants' });
-    // Workers can only create leaves for themselves
     const isSelf = userId === req.user.id || userId === req.user._id;
     if (req.user.role === 'worker' && !isSelf) return res.status(403).json({ message: 'Access denied' });
 
-    const users = readLocal('users.json');
-    const targetUser = users.find(u => u.id === userId || u._id === userId);
-
-    const leaves = readLocal('leaves.json');
-    const newLeave = {
-      id: `leave_${Date.now()}`,
-      userId,
-      userName: targetUser?.name || '',
+    const targetUser = await User.findById(userId).lean();
+    const leave = await new Leave({
+      _id: `leave_${Date.now()}`,
+      userId, userName: targetUser?.name || '',
       departmentId: req.user.departmentId,
-      startDate,
-      endDate,
-      type: type || 'congé',
-      createdAt: new Date().toISOString()
-    };
-    leaves.push(newLeave);
-    writeLocal('leaves.json', leaves);
-    res.json(newLeave);
-  } catch (error) { res.status(500).json({ message: error.message }); }
+      startDate, endDate, type: type || 'congé'
+    }).save();
+    res.json(withId(leave.toObject()));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 app.delete('/api/leaves/:id', authenticateToken, async (req, res) => {
   try {
-    let leaves = readLocal('leaves.json');
-    const leave = leaves.find(l => l.id === req.params.id);
+    const leave = await Leave.findById(req.params.id).lean();
     if (!leave) return res.status(404).json({ message: 'Not found' });
-    // Workers can only delete their own; chef de projet can delete any in their dept
     const isSelf = leave.userId === req.user.id || leave.userId === req.user._id;
     if (req.user.role === 'worker' && !isSelf) return res.status(403).json({ message: 'Access denied' });
     if (leave.departmentId !== req.user.departmentId) return res.status(403).json({ message: 'Access denied' });
-
-    leaves = leaves.filter(l => l.id !== req.params.id);
-    writeLocal('leaves.json', leaves);
+    await Leave.deleteOne({ _id: req.params.id });
     res.json({ success: true });
-  } catch (error) { res.status(500).json({ message: error.message }); }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
-// ──────────────────────────────────────────────────────────────────────────────
 
-// Socket.io connection handling
+// ── NOTIFICATION HELPER ───────────────────────────────────────────────────────
+const createNotification = async (userId, title, message, link = null) => {
+  try {
+    const notif = await new Notification({
+      _id: 'notif_' + Date.now() + Math.random().toString(36).substr(2, 5),
+      userId, title, message, link, read: false
+    }).save();
+    const plain = { ...notif.toObject(), id: notif._id };
+    io.emit('notification_added', plain);
+    return plain;
+  } catch (err) {
+    console.error('Error creating notification:', err);
+  }
+};
+
+// ── SOCKET.IO ─────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
   socket.on('new_project', async (data) => {
     try {
-      let newProject;
-      if (USE_LOCAL_DB) {
-        // Socket doesn't easily have req.user, so frontend must send departmentId and initiatorId
-        newProject = await Project.save(data);
-      } else {
-        newProject = new Project(data);
-        await newProject.save();
-      }
-
-      // Broadcast the new project to all connected clients
-      io.emit('project_added', newProject);
-
-      // Create notification for assigned user
+      const newProject = await new Project({
+        _id: Date.now().toString(),
+        ...data,
+        status: data.status || 'Nouveau',
+        createdAt: new Date()
+      }).save();
+      io.emit('project_added', newProject.toObject());
       if (data.assignedTo) {
-        createNotification(
-          data.assignedTo,
-          'Nouveau projet assigné',
-          `On vous a assigné le projet: ${data.name}`,
-          `/table` // Default link
-        );
+        createNotification(data.assignedTo, 'Nouveau projet assigné', `On vous a assigné le projet: ${data.name}`, '/table');
       }
-    } catch (error) {
-      console.error('Error adding project:', error);
+    } catch (err) {
+      console.error('Error adding project:', err);
       socket.emit('error', { message: 'Failed to add project' });
     }
   });
 
   socket.on('update_project_status', async (data) => {
     try {
-      if (USE_LOCAL_DB) {
-        const projects = readLocal('projects.json');
-        const pIndex = projects.findIndex(p => p._id === data.projectId);
-        if (pIndex !== -1) {
-          const oldStatus = projects[pIndex].status;
-          projects[pIndex].status = data.status;
-          writeLocal('projects.json', projects);
-          const updatedProject = projects[pIndex];
-          io.emit('project_updated', updatedProject);
+      const project = await Project.findById(data.projectId).lean();
+      if (!project) return;
+      const oldStatus = project.status;
+      const updated = await Project.findByIdAndUpdate(data.projectId, { $set: { status: data.status } }, { new: true }).lean();
+      io.emit('project_updated', updated);
 
-          const moverName = data.workerName || 'Un membre';
-          const msg = `${moverName} a déplacé "${updatedProject.name}" : ${oldStatus} → ${updatedProject.status}`;
-
-          // Notify chef de produit (initiator)
-          if (updatedProject.initiatorId) {
-            createNotification(
-              updatedProject.initiatorId,
-              'Statut mis à jour',
-              msg,
-              '/table'
-            );
-          }
-
-          // Notify all chefs de projet of the same department
-          if (updatedProject.departmentId) {
-            const users = readLocal('users.json');
-            users
-              .filter(u => u.role === 'chef de projet' && u.departmentId === updatedProject.departmentId)
-              .forEach(chef => {
-                createNotification(
-                  chef.id || chef._id,
-                  'Statut mis à jour',
-                  msg,
-                  '/table'
-                );
-              });
-          }
-        }
+      const msg = `${data.workerName || 'Un membre'} a déplacé "${updated.name}" : ${oldStatus} → ${updated.status}`;
+      if (updated.initiatorId) createNotification(updated.initiatorId, 'Statut mis à jour', msg, '/table');
+      if (updated.departmentId) {
+        const chefs = await User.find({ role: 'chef de projet', departmentId: updated.departmentId }).lean();
+        chefs.forEach(chef => createNotification(chef._id, 'Statut mis à jour', msg, '/table'));
       }
-    } catch (error) {
-      console.error('Error updating project:', error);
+    } catch (err) {
+      console.error('Error updating project:', err);
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log('👋 User disconnected:', socket.id);
-  });
+  socket.on('disconnect', () => console.log('👋 User disconnected:', socket.id));
 });
 
-// ── Overdue deadline checker ──────────────────────────────────────────────────
-const checkOverdueProjects = () => {
+// ── OVERDUE CHECK ─────────────────────────────────────────────────────────────
+const checkOverdueProjects = async () => {
   try {
-    if (!USE_LOCAL_DB) return;
-    const projects = readLocal('projects.json');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const overdue = await Project.find({
+      status: { $ne: 'Terminé' },
+      deadline: { $lt: todayStr },
+      overdueNotifiedDate: { $ne: todayStr }
+    }).lean();
 
-    let changed = false;
-    projects.forEach(project => {
-      if (!project.deadline || project.status === 'Terminé') return;
-      const deadline = new Date(project.deadline);
-      deadline.setHours(0, 0, 0, 0);
-      if (deadline >= today) return; // not overdue yet
-
-      // Send at most one notification per project per day
-      if (project.overdueNotifiedDate === todayStr) return;
-
-      if (project.assignedTo) {
-        const deadlineFormatted = new Date(project.deadline).toLocaleDateString('fr-FR');
-        createNotification(
-          project.assignedTo,
-          'Deadline dépassée',
-          `Le projet "${project.name}" a dépassé sa deadline du ${deadlineFormatted}. Mettez à jour son statut.`,
-          '/table'
-        );
+    for (const p of overdue) {
+      if (p.assignedTo) {
+        const deadlineFormatted = new Date(p.deadline).toLocaleDateString('fr-FR');
+        await createNotification(p.assignedTo, 'Deadline dépassée', `Le projet "${p.name}" a dépassé sa deadline du ${deadlineFormatted}. Mettez à jour son statut.`, '/table');
       }
-      project.overdueNotifiedDate = todayStr;
-      changed = true;
-    });
-
-    if (changed) writeLocal('projects.json', projects);
-    console.log(`🕐 Overdue check done — ${new Date().toLocaleTimeString()}`);
+      await Project.findByIdAndUpdate(p._id, { overdueNotifiedDate: todayStr });
+    }
+    if (overdue.length > 0) console.log(`🕐 Overdue: ${overdue.length} projet(s) notifié(s)`);
   } catch (err) {
     console.error('Error checking overdue projects:', err);
   }
 };
 
-// Run on startup then every hour
-checkOverdueProjects();
-setInterval(checkOverdueProjects, 60 * 60 * 1000);
+// ── START SERVER ──────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5001;
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 15000 })
+  .then(() => {
+    console.log('✅ Connected to MongoDB Atlas');
+    checkOverdueProjects();
+    setInterval(checkOverdueProjects, 60 * 60 * 1000);
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  })
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
+    process.exit(1);
+  });
