@@ -14,7 +14,7 @@
     "delete": "حذف"
   },
   "dashboard": {
-    "title": "WorkPlan",
+    "title": "Badgi-WorkFlow",
     "subtitle": "حسّن سير عملك بذكاء",
     "table": "جدول",
     "kanban": "خط الأنابيب",
@@ -40,7 +40,13 @@
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
     "confirm_password": "تأكيد كلمة المرور",
-    "forgot_password": "هل نسيت كلمة المرور؟"
+    "forgot_password": "هل نسيت كلمة المرور؟",
+    "login_failed": "بريد إلكتروني أو كلمة مرور غير صحيحة",
+    "google_continue": "المتابعة عبر Google",
+    "or_email": "أو بالبريد الإلكتروني",
+    "no_account": "ليس لديك حساب؟",
+    "signup_title": "أكمل تسجيلك",
+    "signup_subtitle": "مرحباً! قم بإعداد ملفك الشخصي."
   },
   "theme": {
     "light": "الوضع الفاتح",

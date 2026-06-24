@@ -14,7 +14,7 @@
     "delete": "Supprimer"
   },
   "dashboard": {
-    "appName": "FlowLive",
+    "appName": "Badgi-WorkFlow",
     "appStatus": "Live",
     "subtitle": "Optimisez votre flux de travail",
     "table": "Table",
@@ -41,7 +41,13 @@
     "email": "Email",
     "password": "Mot de passe",
     "confirm_password": "Confirmer le mot de passe",
-    "forgot_password": "Mot de passe oublié ?"
+    "forgot_password": "Mot de passe oublié ?",
+    "login_failed": "Email ou mot de passe incorrect",
+    "google_continue": "Continuer avec Google",
+    "or_email": "Ou avec votre email",
+    "no_account": "Vous n'avez pas de compte ?",
+    "signup_title": "Finalisez votre inscription",
+    "signup_subtitle": "Bienvenue ! Configurez votre profil."
   },
   "theme": {
     "light": "Mode Clair",

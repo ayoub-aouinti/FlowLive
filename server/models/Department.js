@@ -17,7 +17,9 @@ const deptSchema = new mongoose.Schema({
   pageConfigs: { type: mongoose.Schema.Types.Mixed, default: {} },
   formFields: { type: [formFieldSchema], default: [] },
   coverUrl: { type: String, default: null },
-  logoUrl: { type: String, default: null }
+  logoUrl: { type: String, default: null },
+  workspaceTitle: { type: String, default: null },
+  workspaceSubtitle: { type: String, default: null }
 }, { versionKey: false });
 
 module.exports = mongoose.model('Department', deptSchema);

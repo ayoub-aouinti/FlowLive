@@ -80,7 +80,7 @@ export default function PublicSignup() {
 
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 max-w-md w-full border border-[var(--notion-border)] animate-in slide-in-from-bottom duration-500">
         <div className="text-center mb-8">
-          <img src={logo} alt="WorkPlan Logo" className="h-16 w-auto mx-auto mb-4" />
+          <img src={logo} alt="Badgi-WorkFlow" className="h-16 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-[var(--notion-text)]">{t('auth.signup')}</h1>
           <p className="text-[var(--notion-text-light)] mt-2">{t('dashboard.subtitle')}</p>
         </div>

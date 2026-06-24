@@ -17,6 +17,8 @@ export interface Department {
   activePages?: string[];
   coverUrl?: string | null;
   logoUrl?: string | null;
+  workspaceTitle?: string | null;
+  workspaceSubtitle?: string | null;
 }
 
 export interface FormField {

@@ -80,6 +80,8 @@ const Dashboard: React.FC = () => {
     formFields: FormField[] | null;
     coverUrl?: string | null;
     logoUrl?: string | null;
+    workspaceTitle?: string | null;
+    workspaceSubtitle?: string | null;
   } | null>(null);
   const { token } = useAuth();
 
@@ -197,14 +199,12 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-1 transition-colors duration-300">
       <div className="flex items-center gap-4 mb-8 pt-4">
-        <img src="/logo.png" alt="WorkPlan" className="w-16 h-16 rounded-2xl object-contain shadow-lg border border-[var(--notion-border)] p-1 bg-white dark:bg-slate-800" />
         <div>
-          <h1 className="text-[40px] font-black text-[var(--notion-text)] leading-tight flex items-center gap-1">
-            <span className="text-[var(--brand-primary)]">Work</span>
-            <span className="text-[var(--brand-accent)]">Plan</span>
+          <h1 className="text-[40px] font-black text-[var(--notion-text)] leading-tight">
+            {deptConfig?.workspaceTitle || deptConfig?.departmentName || 'Badgi-WorkFlow'}
           </h1>
-          <p className="text-[var(--notion-text-light)] text-lg font-medium -mt-1 tracking-tight capitalize">
-            {deptConfig?.departmentName || t('common.workspace')}
+          <p className="text-[var(--notion-text-light)] text-sm font-medium -mt-1 tracking-tight">
+            {deptConfig?.workspaceSubtitle || 'Badgi-WorkFlow'}
           </p>
         </div>
       </div>

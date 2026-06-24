@@ -308,7 +308,10 @@ export function CockpitView() {
                   <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
                     <Building2 className="w-4 h-4" />
                   </div>
-                  {dept.name}
+                  <div>
+                    <div>{dept.workspaceTitle || dept.name}</div>
+                    {dept.workspaceTitle && <div className="text-xs text-slate-400 font-normal">{dept.name}</div>}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-500 font-medium">{dept.adminId}</td>
                 <td className="px-6 py-4">

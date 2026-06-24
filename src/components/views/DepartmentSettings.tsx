@@ -42,6 +42,8 @@ export function DepartmentSettings() {
     formFields?: FormField[];
     departmentId?: string;
     departmentName?: string;
+    workspaceTitle?: string;
+    workspaceSubtitle?: string;
   }>({ products: [], types: [], activePages: [], pageConfigs: {}, formFields: [] });
   const [departmentMembers, setDepartmentMembers] = useState<(User & { status: string; isInvitation?: boolean })[]>([]);
   const [newItem, setNewItem] = useState({ type: 'product', value: '' });
@@ -261,6 +263,62 @@ export function DepartmentSettings() {
         </h1>
         <p className="text-[var(--notion-text-light)] font-medium">Gérez la configuration et les membres de votre équipe locale.</p>
       </div>
+
+      {/* ── Titre du workspace ──────────────────────────────────────── */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <FileText className="w-5 h-5 text-[var(--brand-accent)]" />
+          <h3 className="text-lg font-bold text-[var(--notion-text)]">Titre de l'espace de travail</h3>
+        </div>
+        <div className="bg-[var(--notion-sidebar)] p-5 border border-[var(--notion-border)] rounded-2xl mb-2">
+          <p className="text-sm text-[var(--notion-text-light)] mb-3">Ce titre s'affiche en grand dans le tableau de bord à la place du nom de l'application.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-[var(--notion-text-light)] uppercase tracking-wider mb-1.5">Titre principal</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl text-[var(--notion-text)] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/30 focus:border-[var(--brand-accent)] transition-all"
+                  placeholder={config.departmentName || 'Ex: Département Marketing Médis'}
+                  value={config.workspaceTitle || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, workspaceTitle: e.target.value }))}
+                  onBlur={(e) => handleUpdateConfig({ ...config, workspaceTitle: e.target.value })}
+                />
+                {config.workspaceTitle && (
+                  <button type="button" onClick={() => handleUpdateConfig({ ...config, workspaceTitle: '' })} className="p-2 text-[var(--notion-text-light)] hover:text-red-500 transition-colors" title="Réinitialiser">
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[var(--notion-text-light)] uppercase tracking-wider mb-1.5">Sous-titre</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl text-[var(--notion-text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/30 focus:border-[var(--brand-accent)] transition-all"
+                  placeholder="Badgi-WorkFlow"
+                  value={config.workspaceSubtitle || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, workspaceSubtitle: e.target.value }))}
+                  onBlur={(e) => handleUpdateConfig({ ...config, workspaceSubtitle: e.target.value })}
+                />
+                {config.workspaceSubtitle && (
+                  <button type="button" onClick={() => handleUpdateConfig({ ...config, workspaceSubtitle: '' })} className="p-2 text-[var(--notion-text-light)] hover:text-red-500 transition-colors" title="Réinitialiser">
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+            {(config.workspaceTitle || config.workspaceSubtitle) && (
+              <p className="text-xs text-[var(--notion-text-light)] pt-1">
+                Aperçu :&nbsp;
+                <span className="font-bold text-[var(--notion-text)]">{config.workspaceTitle || config.departmentName || 'Badgi-WorkFlow'}</span>
+                {' '}<span className="opacity-60">{config.workspaceSubtitle || 'Badgi-WorkFlow'}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* ── Pages autorisées & Column config ─────────────────────────── */}
       <section>

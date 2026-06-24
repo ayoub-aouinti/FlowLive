@@ -49,6 +49,9 @@ const Sidebar: React.FC = () => {
     activePages: string[];
     pageConfigs: Record<string, unknown>;
     formFields: FormField[] | null;
+    workspaceTitle?: string | null;
+    workspaceSubtitle?: string | null;
+    logoUrl?: string | null;
   } | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -116,10 +119,24 @@ const Sidebar: React.FC = () => {
         {/* Header / Workspace */}
         <div className="p-3 mb-2">
           <div className="flex items-center gap-2 px-2 py-2 hover:bg-[var(--notion-hover)] rounded-lg cursor-pointer transition-colors group">
-            <img src={logo} alt="WorkPlan" className="w-8 h-8 rounded object-contain" />
-            <div className="flex flex-col">
-              <span className="text-sm font-bold leading-none text-[var(--notion-text)]">Work<span className="text-[var(--notion-text-light)] font-light italic">Plan</span></span>
-              <span className="text-[10px] text-[var(--notion-text-light)] font-medium tracking-tight mt-0.5">Workspace</span>
+            <img
+              src={
+                user?.role === 'superadmin'
+                  ? (departments.find(d => d.id === selectedDepartmentId)?.logoUrl || logo)
+                  : (deptConfig?.logoUrl || logo)
+              }
+              alt="Logo"
+              className="w-8 h-8 rounded object-contain"
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold leading-none text-[var(--notion-text)] truncate">
+                {user?.role === 'superadmin'
+                  ? (departments.find(d => d.id === selectedDepartmentId)?.workspaceTitle || departments.find(d => d.id === selectedDepartmentId)?.name || 'Badgi-WorkFlow')
+                  : (deptConfig?.workspaceTitle || 'Badgi-WorkFlow')}
+              </span>
+              <span className="text-[10px] text-[var(--notion-text-light)] font-medium tracking-tight mt-0.5">
+                {deptConfig?.workspaceSubtitle || 'Badgi-WorkFlow'}
+              </span>
             </div>
             <div className="flex-1" />
             <ChevronRight size={14} className="text-[var(--notion-text-light)] group-hover:text-[var(--notion-text)]" />
@@ -178,7 +195,7 @@ const Sidebar: React.FC = () => {
 
           <div className="pt-6 pb-2 px-2">
             <span className="text-[11px] font-bold text-[var(--notion-text-light)] uppercase tracking-wider">
-              {user?.role === 'superadmin' ? 'Systèmes Départements' : (deptConfig?.departmentName || t('common.workspace'))}
+              {user?.role === 'superadmin' ? 'Systèmes Départements' : (deptConfig?.workspaceTitle || deptConfig?.departmentName || t('common.workspace'))}
             </span>
           </div>
 
@@ -196,7 +213,7 @@ const Sidebar: React.FC = () => {
                   }`}
                 >
                   <LayoutGrid size={16} className={selectedDepartmentId === dept.id && view !== 'cockpit' ? 'text-[var(--brand-accent)]' : 'text-[var(--notion-text-light)]'} />
-                  <span className="text-sm truncate">{dept.name}</span>
+                  <span className="text-sm truncate">{dept.workspaceTitle || dept.name}</span>
                 </button>
               ))
             ) : (

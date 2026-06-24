@@ -122,7 +122,7 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
                 {config?.logoUrl ? (
                   <img src={config.logoUrl} className="w-full h-full object-contain rounded-xl" alt="Logo" />
                 ) : (
-                  <span className="select-none filter drop-shadow-sm">📅</span>
+                  <img src="/logo.png" className="w-full h-full object-contain rounded-xl p-2 opacity-80" alt="Badgi-WorkFlow" />
                 )}
               </div>
               

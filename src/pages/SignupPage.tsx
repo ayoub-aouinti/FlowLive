@@ -113,7 +113,7 @@ export default function SignupPage() {
         ) : (
           <>
             <div className="text-center mb-8">
-              <img src={logo} alt="WorkPlan" className="h-16 w-auto mx-auto mb-4" />
+              <img src={logo} alt="Badgi-WorkFlow" className="h-16 w-auto mx-auto mb-4" />
               <h1 className="text-2xl font-bold text-[var(--notion-text)]">{t('auth.signup_title') || 'Finalisez votre inscription'}</h1>
               <p className="text-[var(--notion-text-light)] mt-2">{t('auth.signup_subtitle') || 'Bienvenue parmi nous ! Configurez votre profil.'}</p>
             </div>
