@@ -1,42 +1,51 @@
 version: '3.9'
 
 # ──────────────────────────────────────────────────────────────────────────────
-# WorkPlan / FlowLive — Docker Compose (MongoDB Atlas)
+# WorkPlan / FlowLive — Docker Compose (Single Container + Local MongoDB)
 #
 # Quick start:
-#   cp .env.example .env          # fill in MONGODB_URI, JWT_SECRET, emails
+#   cp .env.example .env          # fill in JWT_SECRET, email configurations, etc.
 #   docker-compose up --build
 #
 # Access:
-#   Frontend  → http://localhost
-#   Backend   → http://localhost:5001
-#
-# Remote server: set VITE_API_URL=http://<server-ip>:5001 in .env BEFORE build.
+#   App (Frontend & Backend)  → http://localhost:5001
 # ──────────────────────────────────────────────────────────────────────────────
 
 services:
 
-  # ── Backend (Node.js / Express / Socket.io / MongoDB Atlas) ─────────────────
-  backend:
+  # ── Local MongoDB Database ──────────────────────────────────────────────────
+  mongodb:
+    image: mongo:6.0
+    container_name: workflowlive-db
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+
+  # ── Unified Application (Frontend + Backend on port 5001) ───────────────────
+  app:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile
-    image: workflowlive-backend
-    container_name: workflowlive-backend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5001}
+    image: workflowlive-app
+    container_name: workflowlive-app
     restart: unless-stopped
     ports:
-      - "${BACKEND_PORT:-5001}:5001"
+      - "${PORT:-5001}:5001"
     environment:
       PORT: 5001
       NODE_ENV: production
-      MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is required — set it in .env}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/flowlive}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required — set it in .env}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001}
       EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
       EMAIL_PORT: ${EMAIL_PORT:-465}
       EMAIL_USER: ${EMAIL_USER:-}
       EMAIL_PASS: ${EMAIL_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+    depends_on:
+      - mongodb
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:5001/api/health"]
       interval: 30s
@@ -44,18 +53,5 @@ services:
       retries: 3
       start_period: 20s
 
-  # ── Frontend (Vite build → Nginx) ───────────────────────────────────────────
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:5001}
-    image: workflowlive-frontend
-    container_name: workflowlive-frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-80}:80"
-    depends_on:
-      backend:
-        condition: service_healthy
+volumes:
+  mongodb_data:

@@ -587,6 +587,19 @@ const checkOverdueProjects = async () => {
   }
 };
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+
+// Serve static assets in production
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Wildcard routing to serve React app for frontend routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // ── START SERVER ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5001;
 
