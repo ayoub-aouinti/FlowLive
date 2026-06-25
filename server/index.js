@@ -603,14 +603,20 @@ app.get('*', (req, res) => {
 // ── START SERVER ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5001;
 
-mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 15000 })
-  .then(() => {
-    console.log('✅ Connected to MongoDB Atlas');
-    checkOverdueProjects();
-    setInterval(checkOverdueProjects, 60 * 60 * 1000);
-    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+const connectWithRetry = () => {
+  console.log('Connecting to MongoDB...');
+  mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 15000 })
+    .then(() => {
+      console.log('✅ Connected to MongoDB');
+      checkOverdueProjects();
+      setInterval(checkOverdueProjects, 60 * 60 * 1000);
+      server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    })
+    .catch(err => {
+      console.error('❌ MongoDB connection error:', err.message);
+      console.log('Retrying to connect to MongoDB in 5 seconds...');
+      setTimeout(connectWithRetry, 5000);
+    });
+};
+
+connectWithRetry();
