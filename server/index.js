@@ -596,7 +596,7 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Wildcard routing to serve React app for frontend routes
-app.get('*', (req, res) => {
+app.get('*all', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
