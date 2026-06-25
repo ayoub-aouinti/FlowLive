@@ -10,7 +10,7 @@ interface InboxPanelProps {
   onNotificationRead?: () => void;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
 
 const InboxPanel: React.FC<InboxPanelProps> = ({ onClose, onNotificationRead }) => {
   const [notifications, setNotifications] = React.useState<Notification[]>([]);

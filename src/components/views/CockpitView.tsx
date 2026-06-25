@@ -14,7 +14,7 @@ const AVAILABLE_PAGES = [
   { id: 'stats', label: 'Stats' }
 ];
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
 
 export function CockpitView() {
   const { token } = useAuth();
