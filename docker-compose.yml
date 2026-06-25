@@ -31,8 +31,10 @@ services:
     image: workflowlive-app
     container_name: workflowlive-app
     restart: unless-stopped
-    ports:
-      - "${PORT:-5001}:5001"
+    # Exposed internally (no host binding to avoid port conflicts).
+    # If you need direct IP:port access, uncomment the ports section below:
+    # ports:
+    #   - "${PORT_HOST:-5001}:5001"
     environment:
       PORT: 5001
       NODE_ENV: production
