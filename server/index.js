@@ -28,13 +28,28 @@ const allowedOrigins = [
   'http://localhost:5173'
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) callback(null, true);
-    else callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-}));
+const corsOptionsDelegate = (req, callback) => {
+  const origin = req.header('Origin');
+  const host = req.header('Host');
+  let isAllowed = false;
+
+  if (!origin) {
+    isAllowed = true;
+  } else {
+    const originHost = origin.replace(/^https?:\/\//, '');
+    if (
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.includes('*') ||
+      originHost === host
+    ) {
+      isAllowed = true;
+    }
+  }
+
+  callback(null, { origin: isAllowed, credentials: true });
+};
+
+app.use(cors(corsOptionsDelegate));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
