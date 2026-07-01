@@ -8,6 +8,10 @@ const leaveSchema = new mongoose.Schema({
   startDate: String,
   endDate: String,
   type: { type: String, default: 'congé' },
+  status: { type: String, default: 'pending' }, // 'pending' | 'confirmed'
+  description: { type: String, default: '' },
+  attachmentBase64: { type: String, default: '' },
+  attachmentName: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 

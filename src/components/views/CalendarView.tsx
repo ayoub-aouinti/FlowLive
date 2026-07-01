@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, Plus, User as UserIcon, Palmtree, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ChevronLeft, ChevronRight, X, Plus, User as UserIcon, Palmtree, AlertCircle, Paperclip, Check, Clock } from 'lucide-react';
 import axios from 'axios';
 import type { Project, User, Leave } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -66,16 +66,24 @@ const WORKLOAD = {
 
 const WORKER_PALETTE = ['#6366f1','#ec4899','#14b8a6','#f59e0b','#8b5cf6','#10b981','#f43f5e','#3b82f6','#a855f7','#06b6d4'];
 
-// ── Month/day labels ─────────────────────────────────────────────────────────
 const MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const DAYS   = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 function cellKey(day: number, month: number, year: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+interface LeaveFormState {
+  userId: string;
+  startDate: string;
+  endDate: string;
+  type: Leave['type'];
+  description: string;
+  attachmentBase64: string;
+  attachmentName: string;
+}
 
 const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
   const { token, user } = useAuth();
@@ -84,13 +92,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
   const [workers, setWorkers] = useState<User[]>([]);
   const [leaves, setLeaves]   = useState<Leave[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [leaveForm, setLeaveForm] = useState<{
-    userId: string; startDate: string; endDate: string; type: Leave['type'];
-  }>({ userId: '', startDate: '', endDate: '', type: 'congé' });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [leaveForm, setLeaveForm] = useState<LeaveFormState>({
+    userId: '', startDate: '', endDate: '', type: 'congé',
+    description: '', attachmentBase64: '', attachmentName: '',
+  });
 
   const year  = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
   const holidays = getFrenchHolidays(year);
 
   const isChef = user?.role === 'chef de projet' || user?.role === 'superadmin';
@@ -173,6 +183,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
     return filtered;
   }
 
+  const pendingCount = leaves.filter(l => l.status === 'pending').length;
+
   // ── Worker colour map ──────────────────────────────────────────────────────
   const workerColor: Record<string, string> = {};
   workers.forEach((w, i) => { workerColor[w._id] = WORKER_PALETTE[i % WORKER_PALETTE.length]; });
@@ -184,17 +196,46 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
       startDate: prefillDate || '',
       endDate:   prefillDate || '',
       type: 'congé',
+      description: '',
+      attachmentBase64: '',
+      attachmentName: '',
     });
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setShowModal(true);
   };
 
-  const handleSubmitLeave = async (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLeaveForm(f => ({
+        ...f,
+        attachmentBase64: reader.result as string,
+        attachmentName: file.name,
+      }));
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitLeave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       await axios.post(`${API_URL}/api/leaves`, leaveForm, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setShowModal(false);
+      fetchLeaves();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleConfirmLeave = async (leaveId: string) => {
+    try {
+      await axios.patch(`${API_URL}/api/leaves/${leaveId}/confirm`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       fetchLeaves();
     } catch (err) { console.error(err); }
   };
@@ -207,6 +248,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
       });
       fetchLeaves();
     } catch (err) { console.error(err); }
+  };
+
+  const openAttachment = (base64: string, name: string) => {
+    const link = document.createElement('a');
+    link.href = base64;
+    link.download = name;
+    link.click();
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -239,6 +287,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
 
         {/* Right: legend + worker filter + add leave */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Pending badge for chef */}
+          {isChef && pendingCount > 0 && (
+            <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded-full border border-amber-300 dark:border-amber-700">
+              <Clock size={10} />
+              {pendingCount} en attente
+            </span>
+          )}
+
           {/* Workload legend */}
           <div className="hidden sm:flex items-center gap-2 text-[10px] text-[var(--notion-text-light)] border-r border-[var(--notion-border)] pr-3 mr-1">
             <span className="flex items-center gap-1">
@@ -255,15 +311,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
             </span>
           </div>
 
-          {/* Worker filter — only for chef or chef de produit */}
+          {/* Worker filter */}
           {workers.length > 0 && (
             <label className="flex items-center gap-1.5 border border-[var(--notion-border)] rounded-lg px-2 py-1.5 bg-[var(--notion-bg)] cursor-pointer">
               <UserIcon size={13} className="text-[var(--notion-text-light)]" />
               <select
                 value={selectedWorkerId}
                 onChange={e => setSelectedWorkerId(e.target.value)}
-                className="text-xs bg-transparent text-[var(--notion-text)] focus:outline-none cursor-pointer"
-              >
+                className="text-xs bg-transparent text-[var(--notion-text)] focus:outline-none cursor-pointer">
                 <option value="all">Tous les collaborateurs</option>
                 {workers.map(w => (
                   <option key={w._id} value={w._id}>{w.name}</option>
@@ -299,7 +354,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
         {cells.map((cell, idx) => {
           const key       = cellKey(cell.day, cell.month, cell.year);
           const nonWork   = isNonWorking(cell.day, cell.month, cell.year);
-          const holiday   = isHoliday(cell.day, cell.month, cell.year);
           const today     = isToday(cell.day, cell.month, cell.year);
           const dayProjs  = cell.current ? projectsForDay(cell.day, cell.month, cell.year) : [];
           const dayLeaves = cell.current ? leavesForDay(cell.day, cell.month, cell.year) : [];
@@ -307,7 +361,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
           const wLevel    = selectedWorkerId !== 'all' ? workloadLevel(hours) : null;
           const holidayLabel = holidays.get(key);
 
-          // Background
           let bgClass = '';
           if (!cell.current) {
             bgClass = 'bg-[var(--notion-sidebar)] opacity-60';
@@ -361,18 +414,60 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
               )}
 
               {/* Leaves */}
-              {dayLeaves.map(l => (
-                <div key={l.id}
-                  className="flex items-center gap-1 px-1 py-0.5 rounded text-[9px] font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 mb-0.5 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
-                  title={`${l.userName} — ${l.type} (cliquer pour supprimer)`}
-                  onClick={() => {
-                    const canDelete = isChef || l.userId === user?._id;
-                    if (canDelete) handleDeleteLeave(l.id, l.userName || l.userId);
-                  }}>
-                  <Palmtree size={8} className="flex-shrink-0" />
-                  <span className="truncate">{l.userName || 'Congé'}</span>
-                </div>
-              ))}
+              {dayLeaves.map(l => {
+                const isPending = l.status === 'pending';
+                const isMine = l.userId === user?._id;
+                const canDelete = isChef || isMine;
+                const tooltip = [
+                  l.userName,
+                  l.type,
+                  l.description,
+                  isPending ? '⏳ En attente de validation' : '✓ Confirmé'
+                ].filter(Boolean).join(' — ');
+
+                return (
+                  <div key={l.id}
+                    title={tooltip}
+                    className={`flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-medium mb-0.5 transition-colors
+                      ${isPending
+                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-dashed border-amber-400 dark:border-amber-600'
+                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'}`}>
+
+                    <Palmtree size={8} className="flex-shrink-0" />
+                    <span className="truncate flex-1">{l.userName || 'Congé'}</span>
+
+                    {/* Attachment indicator */}
+                    {l.attachmentBase64 && (
+                      <button
+                        onClick={e => { e.stopPropagation(); openAttachment(l.attachmentBase64!, l.attachmentName || 'pièce-jointe'); }}
+                        title="Télécharger la pièce jointe"
+                        className="flex-shrink-0 opacity-70 hover:opacity-100">
+                        <Paperclip size={7} />
+                      </button>
+                    )}
+
+                    {/* Confirm button (chef only, pending only) */}
+                    {isChef && isPending && (
+                      <button
+                        onClick={e => { e.stopPropagation(); handleConfirmLeave(l.id); }}
+                        title="Confirmer le congé"
+                        className="flex-shrink-0 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 ml-0.5">
+                        <Check size={9} />
+                      </button>
+                    )}
+
+                    {/* Delete button */}
+                    {canDelete && (
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDeleteLeave(l.id, l.userName || l.userId); }}
+                        title="Supprimer"
+                        className="flex-shrink-0 opacity-50 hover:opacity-100 hover:text-rose-500 ml-0.5">
+                        <X size={8} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Projects */}
               <div className="space-y-0.5 overflow-y-auto max-h-[55px] scrollbar-hide">
@@ -411,6 +506,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
             </div>
 
             <form onSubmit={handleSubmitLeave} className="p-5 space-y-4">
+
               {/* Collaborateur (chef only) */}
               {isChef ? (
                 <div>
@@ -437,7 +533,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
                 <label className="text-xs font-semibold text-[var(--notion-text-light)] block mb-1">Type</label>
                 <select
                   value={leaveForm.type}
-                  onChange={e => setLeaveForm(f => ({ ...f, type: e.target.value as Leave['type'] }))}
+                  onChange={e => setLeaveForm(f => ({ ...f, type: e.target.value as Leave['type'], attachmentBase64: '', attachmentName: '' }))}
                   className="w-full border border-[var(--notion-border)] rounded-lg px-3 py-2 text-sm bg-[var(--notion-bg)] text-[var(--notion-text)] focus:outline-none focus:border-[var(--brand-accent)]">
                   <option value="congé">Congé payé</option>
                   <option value="maladie">Arrêt maladie</option>
@@ -464,9 +560,62 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
                 </div>
               </div>
 
+              {/* Description (optional) */}
+              <div>
+                <label className="text-xs font-semibold text-[var(--notion-text-light)] block mb-1">
+                  Description <span className="font-normal opacity-60">(optionnelle)</span>
+                </label>
+                <textarea
+                  value={leaveForm.description}
+                  onChange={e => setLeaveForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  placeholder="Motif, précisions..."
+                  className="w-full border border-[var(--notion-border)] rounded-lg px-3 py-2 text-sm bg-[var(--notion-bg)] text-[var(--notion-text)] focus:outline-none focus:border-[var(--brand-accent)] resize-none" />
+              </div>
+
+              {/* Attachment (only for arrêt maladie) */}
+              {leaveForm.type === 'maladie' && (
+                <div>
+                  <label className="text-xs font-semibold text-[var(--notion-text-light)] block mb-1">
+                    Justificatif médical <span className="font-normal opacity-60">(optionnel)</span>
+                  </label>
+                  <label className={`flex items-center gap-2 border border-dashed rounded-lg px-3 py-2.5 cursor-pointer transition-colors
+                    ${leaveForm.attachmentName
+                      ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
+                      : 'border-[var(--notion-border)] hover:border-[var(--brand-accent)] bg-[var(--notion-hover)]'}`}>
+                    <Paperclip size={14} className={leaveForm.attachmentName ? 'text-emerald-600' : 'text-[var(--notion-text-light)]'} />
+                    <span className="text-xs text-[var(--notion-text-light)] flex-1 truncate">
+                      {uploading ? 'Chargement...' : leaveForm.attachmentName || 'PDF, image (max 10 Mo)'}
+                    </span>
+                    {leaveForm.attachmentName && (
+                      <button type="button"
+                        onClick={e => { e.preventDefault(); setLeaveForm(f => ({ ...f, attachmentBase64: '', attachmentName: '' })); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                        className="text-rose-400 hover:text-rose-600">
+                        <X size={13} />
+                      </button>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      onChange={handleFileChange} />
+                  </label>
+                </div>
+              )}
+
+              {/* Info pour non-chef */}
+              {!isChef && (
+                <p className="text-[10px] text-[var(--notion-text-light)] flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                  <Clock size={10} className="text-amber-500 flex-shrink-0" />
+                  Votre demande sera soumise au chef de projet pour validation.
+                </p>
+              )}
+
               <button type="submit"
-                className="w-full py-2.5 bg-[var(--brand-accent)] text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity">
-                Enregistrer
+                disabled={uploading}
+                className="w-full py-2.5 bg-[var(--brand-accent)] text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+                Envoyer la demande
               </button>
             </form>
           </div>

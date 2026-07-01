@@ -464,7 +464,17 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
 // ── LEAVES (congés) ───────────────────────────────────────────────────────────
 app.get('/api/leaves', authenticateToken, async (req, res) => {
   try {
-    const leaves = await Leave.find({ departmentId: req.user.departmentId }).lean();
+    const isChef = req.user.role === 'chef de projet' || req.user.role === 'superadmin';
+    let leaves;
+    if (isChef) {
+      leaves = await Leave.find({ departmentId: req.user.departmentId }).lean();
+    } else {
+      // Workers & chefs de produit: own leaves + confirmed leaves of the department
+      leaves = await Leave.find({
+        departmentId: req.user.departmentId,
+        $or: [{ userId: req.user.id }, { status: 'confirmed' }]
+      }).lean();
+    }
     res.json(withIds(leaves));
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -473,19 +483,41 @@ app.get('/api/leaves', authenticateToken, async (req, res) => {
 
 app.post('/api/leaves', authenticateToken, async (req, res) => {
   try {
-    const { userId, startDate, endDate, type } = req.body;
+    const { userId, startDate, endDate, type, description, attachmentBase64, attachmentName } = req.body;
     if (!userId || !startDate || !endDate) return res.status(400).json({ message: 'Champs manquants' });
     const isSelf = userId === req.user.id || userId === req.user._id;
     if (req.user.role === 'worker' && !isSelf) return res.status(403).json({ message: 'Access denied' });
 
+    const isChef = req.user.role === 'chef de projet' || req.user.role === 'superadmin';
     const targetUser = await User.findById(userId).lean();
     const leave = await new Leave({
       _id: `leave_${Date.now()}`,
       userId, userName: targetUser?.name || '',
       departmentId: req.user.departmentId,
-      startDate, endDate, type: type || 'congé'
+      startDate, endDate,
+      type: type || 'congé',
+      status: isChef ? 'confirmed' : 'pending',
+      description: description || '',
+      attachmentBase64: attachmentBase64 || '',
+      attachmentName: attachmentName || ''
     }).save();
     res.json(withId(leave.toObject()));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.patch('/api/leaves/:id/confirm', authenticateToken, async (req, res) => {
+  try {
+    const isChef = req.user.role === 'chef de projet' || req.user.role === 'superadmin';
+    if (!isChef) return res.status(403).json({ message: 'Access denied' });
+    const leave = await Leave.findOneAndUpdate(
+      { _id: req.params.id, departmentId: req.user.departmentId },
+      { status: 'confirmed' },
+      { new: true }
+    ).lean();
+    if (!leave) return res.status(404).json({ message: 'Not found' });
+    res.json(withId(leave));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -496,7 +528,8 @@ app.delete('/api/leaves/:id', authenticateToken, async (req, res) => {
     const leave = await Leave.findById(req.params.id).lean();
     if (!leave) return res.status(404).json({ message: 'Not found' });
     const isSelf = leave.userId === req.user.id || leave.userId === req.user._id;
-    if (req.user.role === 'worker' && !isSelf) return res.status(403).json({ message: 'Access denied' });
+    const isChef = req.user.role === 'chef de projet' || req.user.role === 'superadmin';
+    if (!isChef && !isSelf) return res.status(403).json({ message: 'Access denied' });
     if (leave.departmentId !== req.user.departmentId) return res.status(403).json({ message: 'Access denied' });
     await Leave.deleteOne({ _id: req.params.id });
     res.json({ success: true });

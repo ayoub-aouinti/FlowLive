@@ -64,6 +64,10 @@ export interface Leave {
   startDate: string;
   endDate: string;
   type: 'congé' | 'maladie' | 'autre';
+  status?: 'pending' | 'confirmed';
+  description?: string;
+  attachmentBase64?: string;
+  attachmentName?: string;
   createdAt?: string;
 }
 
