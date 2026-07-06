@@ -360,9 +360,9 @@ export function DepartmentSettings() {
           la vue Table seront générées depuis ces champs.
         </p>
 
-        <div className="bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-2xl shadow-xl overflow-hidden mb-6 border-b-4 border-b-[var(--notion-border)]">
+        <div className="bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-2xl overflow-hidden mb-6" style={{ boxShadow: 'var(--shadow-card)' }}>
           {/* Fixed header row */}
-          <div className="flex items-center gap-3 px-6 py-4 bg-[var(--notion-sidebar)] text-[var(--notion-text-light)] text-[10px] font-black uppercase tracking-widest border-b border-[var(--notion-border)] relative z-10">
+          <div className="flex items-center gap-3 px-6 py-4 bg-[var(--surface-low)] text-[var(--notion-text-light)] text-[10px] font-semibold uppercase tracking-widest border-b border-[var(--notion-border)] relative z-10">
             <GripVertical size={14} className="opacity-40 shrink-0" />
             <span className="w-[30%]">Nom du champ</span>
             <span className="flex-1 opacity-70">Type de donnée</span>
@@ -453,7 +453,7 @@ export function DepartmentSettings() {
           </div>
           <button
             onClick={handleAddField}
-            className="flex items-center gap-2 px-8 py-3 bg-[var(--brand-primary)] text-[var(--notion-bg)] dark:text-slate-900 rounded-xl font-black text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg uppercase tracking-widest"
+            className="flex items-center gap-2 px-6 py-3 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white rounded-xl font-semibold text-sm transition-all active:scale-[0.98]" style={{ boxShadow: 'var(--shadow-btn)' }}
           >
             <Plus size={18} strokeWidth={3} />
             Ajouter
@@ -525,7 +525,7 @@ export function DepartmentSettings() {
                 value={newItem.type === 'product' ? newItem.value : ''}
                 onChange={e => setNewItem({ type: 'product', value: e.target.value })}
               />
-              <button type="submit" className="p-2.5 bg-[var(--brand-primary)] text-[var(--notion-bg)] dark:text-slate-900 rounded-xl hover:scale-105 transition-all shadow-md active:scale-95">
+              <button type="submit" className="p-2.5 bg-[var(--brand-secondary)] hover:bg-[var(--brand-primary)] text-white rounded-xl transition-all active:scale-95">
                 <Plus size={20} strokeWidth={3}/>
               </button>
             </form>
@@ -587,7 +587,7 @@ export function DepartmentSettings() {
                 value={newItem.type === 'type' ? newItem.value : ''}
                 onChange={e => setNewItem({ type: 'type', value: e.target.value })}
               />
-              <button type="submit" className="p-2.5 bg-[var(--brand-primary)] text-[var(--notion-bg)] dark:text-slate-900 rounded-xl hover:scale-105 transition-all shadow-md active:scale-95">
+              <button type="submit" className="p-2.5 bg-[var(--brand-secondary)] hover:bg-[var(--brand-primary)] text-white rounded-xl transition-all active:scale-95">
                 <Plus size={20} strokeWidth={3}/>
               </button>
             </form>
@@ -604,9 +604,9 @@ export function DepartmentSettings() {
           </div>
         </div>
 
-        <div className="bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-2xl shadow-xl overflow-hidden mb-8 border-b-4 border-b-[var(--notion-border)]">
+        <div className="bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-2xl overflow-hidden mb-8" style={{ boxShadow: 'var(--shadow-card)' }}>
           <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--notion-sidebar)] border-b border-[var(--notion-border)]">
+            <thead className="bg-[var(--surface-low)] border-b border-[var(--notion-border)]">
               <tr>
                 <th className="px-6 py-4 font-black text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest">Nom</th>
                 <th className="px-6 py-4 font-black text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest text-center">État</th>
@@ -718,7 +718,7 @@ export function DepartmentSettings() {
               <button 
                 type="submit" 
                 disabled={isInviting || !bulkEmails.trim()}
-                className="flex-1 py-3.5 bg-[var(--brand-primary)] text-[var(--notion-bg)] dark:text-slate-900 rounded-xl font-black uppercase tracking-widest shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white rounded-xl font-semibold transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed" style={{ boxShadow: 'var(--shadow-btn)' }}
               >
                 {isInviting ? 'Envoi en cours...' : 'Envoyer les invitations'}
               </button>

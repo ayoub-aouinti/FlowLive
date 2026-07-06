@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Building2, Plus, Search, Trash2, AlertTriangle, Pencil, X, Save, Loader2 } from 'lucide-react';
+import { Building2, Plus, Search, Trash2, AlertTriangle, Pencil, X, Save, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import type { Department } from '../../types';
 
@@ -11,10 +11,46 @@ const AVAILABLE_PAGES = [
   { id: 'calendrier', label: 'Calendrier' },
   { id: 'reporting', label: 'Reporting' },
   { id: 'urgences', label: 'Urgences' },
-  { id: 'stats', label: 'Stats' }
+  { id: 'stats', label: 'Stats' },
 ];
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+const inputClass =
+  'w-full px-3 py-2.5 bg-[var(--surface-low)] border border-[var(--notion-border)] rounded-xl text-[var(--notion-text)] text-sm outline-none transition-all focus:ring-2 focus:ring-[var(--brand-primary)]/10 focus:border-[var(--brand-primary)] placeholder:text-[var(--notion-text-light)]/60';
+const labelClass =
+  'block text-[10px] font-bold uppercase tracking-widest text-[var(--notion-text-light)] mb-1.5';
+
+const PageCheckboxes = ({
+  pages,
+  onChange,
+}: {
+  pages: string[];
+  onChange: (p: string[]) => void;
+}) => (
+  <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+    {AVAILABLE_PAGES.map(page => (
+      <label
+        key={page.id}
+        className="flex items-center gap-2 text-sm font-medium text-[var(--notion-text-light)] cursor-pointer hover:text-[var(--notion-text)] transition-colors"
+      >
+        <input
+          type="checkbox"
+          className="rounded border-[var(--notion-border)] w-3.5 h-3.5 cursor-pointer accent-[var(--brand-primary)]"
+          checked={pages.includes(page.id)}
+          onChange={e =>
+            onChange(
+              e.target.checked
+                ? [...pages, page.id]
+                : pages.filter(p => p !== page.id)
+            )
+          }
+        />
+        {page.label}
+      </label>
+    ))}
+  </div>
+);
 
 export function CockpitView() {
   const { token } = useAuth();
@@ -24,25 +60,24 @@ export function CockpitView() {
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
-  const [newDept, setNewDept] = useState({ 
-    name: '', 
-    adminId: '', 
-    activePages: ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'] 
-  });
 
+  const [newDept, setNewDept] = useState({
+    name: '',
+    adminId: '',
+    activePages: ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+  });
   const [editData, setEditData] = useState({
     name: '',
     adminId: '',
-    activePages: [] as string[]
+    activePages: [] as string[],
   });
 
   const fetchDepartments = React.useCallback(async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/departments`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.get(`${API_URL}/api/departments`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setDepartments(response.data);
+      setDepartments(res.data);
     } catch (err) {
       console.error('Failed to fetch departments:', err);
     }
@@ -56,13 +91,13 @@ export function CockpitView() {
     e.preventDefault();
     try {
       await axios.post(`${API_URL}/api/departments`, newDept, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setShowAddForm(false);
-      setNewDept({ 
-        name: '', 
-        adminId: '', 
-        activePages: ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'] 
+      setNewDept({
+        name: '',
+        adminId: '',
+        activePages: ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
       });
       fetchDepartments();
     } catch (err) {
@@ -72,11 +107,7 @@ export function CockpitView() {
 
   const handleStartEdit = (dept: Department) => {
     setEditingDept(dept);
-    setEditData({
-      name: dept.name,
-      adminId: dept.adminId,
-      activePages: dept.activePages || []
-    });
+    setEditData({ name: dept.name, adminId: dept.adminId, activePages: dept.activePages || [] });
   };
 
   const handleUpdateDepartment = async (e: React.FormEvent) => {
@@ -85,7 +116,7 @@ export function CockpitView() {
     setIsSaving(true);
     try {
       await axios.put(`${API_URL}/api/departments/${editingDept.id}`, editData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setEditingDept(null);
       fetchDepartments();
@@ -102,7 +133,7 @@ export function CockpitView() {
     setIsDeleting(true);
     try {
       await axios.delete(`${API_URL}/api/departments/${deptToDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setDeptToDelete(null);
       fetchDepartments();
@@ -115,230 +146,253 @@ export function CockpitView() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-            <Building2 className="w-8 h-8 text-slate-400" />
+          <h1 className="text-2xl font-bold text-[var(--notion-text)] flex items-center gap-2.5">
+            <Building2 className="w-6 h-6 text-[var(--brand-secondary)]" />
             Cockpit Super Admin
           </h1>
-          <p className="text-slate-500">Gerez les departements et leurs administrateurs</p>
+          <p className="text-sm text-[var(--notion-text-light)] mt-0.5">
+            Gérez les départements et leurs administrateurs
+          </p>
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1e293b] text-white rounded-lg hover:bg-[#334155] transition-colors font-medium shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+          style={{ boxShadow: 'var(--shadow-btn)' }}
         >
-          <Plus className="w-4 h-4" />
-          Nouveau Departement
+          <Plus size={15} />
+          Nouveau département
         </button>
       </div>
 
+      {/* Create form */}
       {showAddForm && (
-        <div className="mb-8 p-6 border border-slate-200 rounded-xl bg-slate-50/50 animate-in slide-in-from-top duration-300">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-slate-800">Creer un nouveau departement</h2>
-            <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-          </div>
-          <form onSubmit={handleCreateDepartment} className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-1">Nom du departement</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 outline-none transition-all font-medium"
-                  value={newDept.name}
-                  onChange={(e) => setNewDept({ ...newDept, name: e.target.value })}
-                  placeholder="Ex: Direction Financiere"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-1">Email de l'Administrateur</label>
-                <input
-                  type="email"
-                  required
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 outline-none transition-all font-medium"
-                  value={newDept.adminId}
-                  onChange={(e) => setNewDept({ ...newDept, adminId: e.target.value })}
-                  placeholder="admin.finance@workplan.com"
-                />
-              </div>
-            </div>
-            
-            <div className="pt-2">
-              <label className="block text-sm font-semibold text-slate-600 mb-3">Pages Autorisees</label>
-              <div className="flex flex-wrap gap-x-6 gap-y-3">
-                {AVAILABLE_PAGES.map(page => (
-                  <label key={page.id} className="flex items-center gap-2.5 text-sm font-medium text-slate-700 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
-                      checked={newDept.activePages.includes(page.id)}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setNewDept(prev => ({
-                          ...prev,
-                          activePages: checked 
-                            ? [...prev.activePages, page.id]
-                            : prev.activePages.filter(p => p !== page.id)
-                        }));
-                      }}
-                    />
-                    <span className="group-hover:text-slate-900 transition-colors">{page.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end mt-2">
+        <div
+          className="bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200"
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
+          <div className="h-0.5 bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-secondary)] to-[#38bdf8]" />
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-[var(--notion-text)]">
+                Créer un nouveau département
+              </h2>
               <button
-                type="button"
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 text-slate-500 hover:text-slate-700 font-bold transition-colors"
+                className="p-1.5 hover:bg-[var(--notion-hover)] rounded-lg text-[var(--notion-text-light)] transition-colors"
               >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-8 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-bold shadow-lg shadow-slate-200"
-              >
-                Creer le département
+                <X size={16} />
               </button>
             </div>
-          </form>
-        </div>
-      )}
-
-      {/* Edit Form */}
-      {editingDept && (
-        <div className="mb-8 p-6 border border-slate-200 rounded-xl bg-slate-50/50 animate-in slide-in-from-top duration-300 ring-2 ring-slate-900/10">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Pencil size={18} className="text-slate-400" />
-              Modifier le département: <span className="text-slate-500">{editingDept.name}</span>
-            </h2>
-            <button onClick={() => setEditingDept(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            <form onSubmit={handleCreateDepartment} className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Nom du département</label>
+                  <input
+                    type="text"
+                    required
+                    className={inputClass}
+                    value={newDept.name}
+                    onChange={e => setNewDept({ ...newDept, name: e.target.value })}
+                    placeholder="Ex: Direction Financière"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Email de l'administrateur</label>
+                  <input
+                    type="email"
+                    required
+                    className={inputClass}
+                    value={newDept.adminId}
+                    onChange={e => setNewDept({ ...newDept, adminId: e.target.value })}
+                    placeholder="admin@workplan.com"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Pages autorisées</label>
+                <PageCheckboxes
+                  pages={newDept.activePages}
+                  onChange={pages => setNewDept({ ...newDept, activePages: pages })}
+                />
+              </div>
+              <div className="flex gap-3 justify-end pt-3 border-t border-[var(--notion-border)]">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="px-4 py-2 text-sm text-[var(--notion-text-light)] hover:text-[var(--notion-text)] font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2"
+                  style={{ boxShadow: 'var(--shadow-btn)' }}
+                >
+                  Créer <ArrowRight size={14} />
+                </button>
+              </div>
+            </form>
           </div>
-          <form onSubmit={handleUpdateDepartment} className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-1">Nom du departement</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 outline-none transition-all font-medium"
-                  value={editData.name}
-                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-1">Email de l'Administrateur</label>
-                <input
-                  type="email"
-                  required
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 outline-none transition-all font-medium"
-                  value={editData.adminId}
-                  onChange={(e) => setEditData({ ...editData, adminId: e.target.value })}
-                />
-              </div>
-            </div>
-            
-            <div className="pt-2">
-              <label className="block text-sm font-semibold text-slate-600 mb-3">Pages Autorisees</label>
-              <div className="flex flex-wrap gap-x-6 gap-y-3">
-                {AVAILABLE_PAGES.map(page => (
-                  <label key={page.id} className="flex items-center gap-2.5 text-sm font-medium text-slate-700 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
-                      checked={editData.activePages.includes(page.id)}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setEditData(prev => ({
-                          ...prev,
-                          activePages: checked 
-                            ? [...prev.activePages, page.id]
-                            : prev.activePages.filter(p => p !== page.id)
-                        }));
-                      }}
-                    />
-                    <span className="group-hover:text-slate-900 transition-colors">{page.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end mt-2">
-              <button
-                type="button"
-                onClick={() => setEditingDept(null)}
-                className="px-4 py-2 text-slate-500 hover:text-slate-700 font-bold transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-8 py-2.5 bg-[#1e293b] text-white rounded-xl hover:bg-[#334155] transition-all font-bold shadow-lg shadow-slate-100 flex items-center gap-2 disabled:opacity-50"
-              >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
-                Enregistrer les modifications
-              </button>
-            </div>
-          </form>
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      {/* Edit form */}
+      {editingDept && (
+        <div
+          className="bg-[var(--notion-sidebar)] border-2 border-[var(--brand-secondary)]/20 rounded-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200"
+          style={{ boxShadow: 'var(--shadow-elevated)' }}
+        >
+          <div className="h-0.5 bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-secondary)] to-[#38bdf8]" />
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-[var(--notion-text)] flex items-center gap-2">
+                <Pencil size={15} className="text-[var(--brand-secondary)]" />
+                Modifier :{' '}
+                <span className="text-[var(--notion-text-light)]">{editingDept.name}</span>
+              </h2>
+              <button
+                onClick={() => setEditingDept(null)}
+                className="p-1.5 hover:bg-[var(--notion-hover)] rounded-lg text-[var(--notion-text-light)] transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateDepartment} className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Nom du département</label>
+                  <input
+                    type="text"
+                    required
+                    className={inputClass}
+                    value={editData.name}
+                    onChange={e => setEditData({ ...editData, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Email de l'administrateur</label>
+                  <input
+                    type="email"
+                    required
+                    className={inputClass}
+                    value={editData.adminId}
+                    onChange={e => setEditData({ ...editData, adminId: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Pages autorisées</label>
+                <PageCheckboxes
+                  pages={editData.activePages}
+                  onChange={pages => setEditData({ ...editData, activePages: pages })}
+                />
+              </div>
+              <div className="flex gap-3 justify-end pt-3 border-t border-[var(--notion-border)]">
+                <button
+                  type="button"
+                  onClick={() => setEditingDept(null)}
+                  className="px-4 py-2 text-sm text-[var(--notion-text-light)] hover:text-[var(--notion-text)] font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-6 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 disabled:opacity-50"
+                  style={{ boxShadow: 'var(--shadow-btn)' }}
+                >
+                  {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Departments table */}
+      <div
+        className="bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-2xl overflow-hidden"
+        style={{ boxShadow: 'var(--shadow-card)' }}
+      >
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/50">
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">ID</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Departement</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Administrateur</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Configuration</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+            <tr className="bg-[var(--surface-low)] border-b border-[var(--notion-border)]">
+              <th className="px-5 py-3 text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-wider">
+                ID
+              </th>
+              <th className="px-5 py-3 text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-wider">
+                Département
+              </th>
+              <th className="px-5 py-3 text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-wider">
+                Administrateur
+              </th>
+              <th className="px-5 py-3 text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-wider">
+                Configuration
+              </th>
+              <th className="px-5 py-3 text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-wider text-right">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
-            {departments.map((dept) => (
-              <tr key={dept.id} className="hover:bg-slate-50/80 transition-colors group">
-                <td className="px-6 py-4 text-xs text-slate-400 font-mono">{dept.id}</td>
-                <td className="px-6 py-4 text-sm font-bold text-slate-700 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
-                    <Building2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div>{dept.workspaceTitle || dept.name}</div>
-                    {dept.workspaceTitle && <div className="text-xs text-slate-400 font-normal">{dept.name}</div>}
+          <tbody className="divide-y divide-[var(--notion-border)]">
+            {departments.map(dept => (
+              <tr
+                key={dept.id}
+                className="hover:bg-[var(--notion-hover)] transition-colors group"
+              >
+                <td className="px-5 py-3.5 text-[11px] text-[var(--notion-text-light)] font-mono">
+                  {dept.id}
+                </td>
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[var(--surface-low)] flex items-center justify-center text-[var(--notion-text-light)] group-hover:bg-[var(--brand-primary)] group-hover:text-white transition-all">
+                      <Building2 size={15} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--notion-text)]">
+                        {dept.workspaceTitle || dept.name}
+                      </div>
+                      {dept.workspaceTitle && (
+                        <div className="text-[11px] text-[var(--notion-text-light)]">
+                          {dept.name}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-slate-500 font-medium">{dept.adminId}</td>
-                <td className="px-6 py-4">
-                  <div className="flex gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 uppercase tracking-tight">
+                <td className="px-5 py-3.5 text-sm text-[var(--notion-text-light)]">
+                  {dept.adminId}
+                </td>
+                <td className="px-5 py-3.5">
+                  <div className="flex gap-1.5">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[var(--surface-low)] text-[var(--notion-text-light)]">
                       {dept.products?.length || 0} Produits
                     </span>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-50 text-slate-400 uppercase tracking-tight">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[var(--notion-hover)] text-[var(--notion-text-light)]">
                       {dept.types?.length || 0} Types
                     </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
+                <td className="px-5 py-3.5 text-right">
+                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
                       onClick={() => handleStartEdit(dept)}
-                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
-                      title="Modifier le departement"
+                      title="Modifier"
+                      className="p-1.5 rounded-lg text-[var(--notion-text-light)] hover:text-[var(--notion-text)] hover:bg-[var(--notion-hover)] transition-all"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil size={14} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setDeptToDelete(dept)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                      title="Supprimer le departement"
+                      title="Supprimer"
+                      className="p-1.5 rounded-lg text-[var(--notion-text-light)] hover:text-red-500 hover:bg-red-50 transition-all"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </td>
@@ -346,12 +400,14 @@ export function CockpitView() {
             ))}
             {departments.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                <td colSpan={5} className="px-5 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center">
-                      <Search className="w-6 h-6 text-slate-200" />
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--surface-low)] flex items-center justify-center">
+                      <Search size={20} className="text-[var(--notion-text-light)]" />
                     </div>
-                    <span className="font-medium">Aucun departement configure</span>
+                    <span className="text-sm font-medium text-[var(--notion-text-light)]">
+                      Aucun département configuré
+                    </span>
                   </div>
                 </td>
               </tr>
@@ -360,45 +416,54 @@ export function CockpitView() {
         </table>
       </div>
 
-      {/* Danger Modal */}
+      {/* Delete confirmation modal */}
       {deptToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-red-50 animate-in fade-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-7 h-7 text-red-600" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div
+            className="bg-[var(--notion-sidebar)] rounded-2xl max-w-md w-full border border-[var(--notion-border)] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+            style={{ boxShadow: 'var(--shadow-elevated)' }}
+          >
+            <div className="h-0.5 bg-gradient-to-r from-red-500 via-red-400 to-rose-300" />
+            <div className="p-7">
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={22} className="text-red-500" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-slate-900 leading-tight">Supprimer le département ?</h3>
-                  <p className="text-sm text-slate-500 font-medium">Cette action est irréversible.</p>
+                  <h3 className="text-lg font-bold text-[var(--notion-text)] leading-tight">
+                    Supprimer le département ?
+                  </h3>
+                  <p className="text-xs text-[var(--notion-text-light)] mt-0.5">
+                    Cette action est irréversible.
+                  </p>
                 </div>
               </div>
 
-              <div className="bg-red-50/50 border border-red-100 rounded-2xl p-5 mb-8">
-                <p className="text-sm text-red-800 leading-relaxed font-medium">
-                  Êtes-vous sûr de vouloir supprimer <strong>{deptToDelete.name}</strong> ? 
-                  Toute la configuration et les accès associés seront définitivement effacés.
+              <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6">
+                <p className="text-sm text-red-700 leading-relaxed">
+                  Êtes-vous sûr de vouloir supprimer{' '}
+                  <strong>{deptToDelete.name}</strong> ? Toute la configuration et les accès
+                  associés seront définitivement effacés.
                 </p>
               </div>
 
-              <div className="flex gap-3 justify-end font-bold text-sm">
+              <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setDeptToDelete(null)}
                   disabled={isDeleting}
-                  className="px-6 py-3 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
+                  className="px-5 py-2 text-sm text-[var(--notion-text-light)] hover:text-[var(--notion-text)] font-medium transition-colors disabled:opacity-50"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleDeleteDepartment}
                   disabled={isDeleting}
-                  className="px-8 py-3 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-100 disabled:opacity-50 flex items-center gap-2"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 disabled:opacity-50"
                 >
                   {isDeleting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                   ) : (
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 size={14} />
                   )}
                   Supprimer
                 </button>

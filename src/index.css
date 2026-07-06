@@ -1,72 +1,97 @@
 @import "tailwindcss";
 
 :root {
-  --notion-bg: #ffffff;
-  --notion-sidebar: #f8fafc; /* Slate-50 */
-  --notion-border: #e2e8f0; /* Slate-200 */
-  --notion-text: #0f172a; /* Slate-900 */
-  --notion-text-light: #64748b; /* Slate-500 */
-  --notion-hover: #f1f5f9; /* Slate-100 */
-  --notion-active: #e2e8f0; /* Slate-200 */
-  --brand-primary: #1b4382; 
-  --brand-secondary: #475569;
-  --brand-accent: #1b4382;
-  --brand-accent-hover: #153566;
+  /* Page background */
+  --notion-bg: #f4f6fb;
+  /* Sidebar / panels */
+  --notion-sidebar: #ffffff;
+  /* Borders */
+  --notion-border: #e4e8f0;
+  /* Text */
+  --notion-text: #0b1c30;
+  --notion-text-light: #6b7280;
+  /* Interaction */
+  --notion-hover: #eef2fb;
+  --notion-active: #dce9ff;
+  /* Brand */
+  --brand-primary: #00236f;
+  --brand-secondary: #0058be;
+  --brand-accent: #0058be;
+  --brand-accent-hover: #004aaa;
+  /* Surface containers (blue-tinted) */
+  --surface-low: #eff4ff;
+  --surface-mid: #e5eeff;
+  --surface-high: #dce9ff;
+  /* Shadows */
+  --shadow-card: 0 2px 12px rgba(0, 35, 111, 0.07);
+  --shadow-elevated: 0 8px 28px rgba(0, 35, 111, 0.13);
+  --shadow-btn: 0 2px 10px rgba(0, 88, 190, 0.28);
 }
 
 .dark {
-  --notion-bg: #0b0f1a; /* Deep Neutral */
-  --notion-sidebar: #0f172a; /* Slate-900 */
-  --notion-border: #1e293b; /* Slate-800 */
-  --notion-elevated: #1e293b; /* Slate-800 */
-  --notion-text: #f8fafc; /* Slate-50 */
-  --notion-text-light: #94a3b8; /* Slate-400 */
-  --notion-hover: #1e293b; /* Slate-800 */
-  --notion-active: #334155; /* Slate-700 */
-  --brand-primary: #ffffff;
-  --brand-secondary: #94a3b8;
+  --notion-bg: #0b0f1a;
+  --notion-sidebar: #0f172a;
+  --notion-border: #1e293b;
+  --notion-elevated: #1e293b;
+  --notion-text: #f1f5f9;
+  --notion-text-light: #94a3b8;
+  --notion-hover: #1e293b;
+  --notion-active: #1e3a5f;
+  --brand-primary: #60a5fa;
+  --brand-secondary: #3b82f6;
+  --brand-accent: #3b82f6;
+  --brand-accent-hover: #60a5fa;
+  --surface-low: #1a2744;
+  --surface-mid: #162040;
+  --surface-high: #12193a;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.4);
+  --shadow-btn: 0 2px 10px rgba(59, 130, 246, 0.3);
 }
 
-/* Premium Dark Mode Input Refinement */
-.dark input, 
-.dark select, 
+/* Dark mode inputs */
+.dark input,
+.dark select,
 .dark textarea {
   background-color: #1e293b !important;
   border-color: #334155 !important;
-  color: #f8fafc !important;
+  color: #f1f5f9 !important;
 }
-
 .dark input::placeholder {
   color: #64748b !important;
 }
 
 body {
   margin: 0;
-  font-family:
-    "Inter",
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   color: var(--notion-text);
   background-color: var(--notion-bg);
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+/* Scrollbar hide */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Notion-like components */
+/* Thin styled scrollbar */
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--notion-border); border-radius: 4px; }
+
+/* Status / priority pills */
 .notion-pill {
   @apply px-2 py-0.5 rounded text-[11px] font-medium transition-colors;
 }
 
-/* RTL Support */
-[dir="rtl"] {
-  text-align: right;
+/* SaaS card */
+.saas-card {
+  background: var(--notion-sidebar);
+  border: 1px solid var(--notion-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
 }
+
+/* RTL Support */
+[dir="rtl"] { text-align: right; }

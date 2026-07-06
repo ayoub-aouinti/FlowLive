@@ -254,7 +254,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="bg-[var(--notion-bg)] h-full flex flex-col overflow-hidden transition-colors duration-300">
+    <div className="bg-[var(--notion-sidebar)] h-full flex flex-col overflow-hidden transition-colors duration-300">
       <div className="flex items-center justify-between p-6 border-b border-[var(--notion-border)]">
         <h2 className="text-xl font-black text-[var(--notion-text)] tracking-tight">Démarrer un nouveau projet</h2>
         {onClose && (
@@ -319,7 +319,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
         <div className="pt-10 border-t border-[var(--notion-border)] border-dashed">
           <button
             type="submit"
-            className="w-full bg-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/90 text-white font-black py-4 px-8 rounded-2xl transition-all shadow-xl shadow-[var(--brand-accent)]/20 active:scale-95 uppercase tracking-widest text-sm flex items-center justify-center gap-3"
+            className="w-full bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white font-black py-4 px-8 rounded-2xl transition-all shadow-[var(--shadow-btn)] active:scale-95 uppercase tracking-widest text-sm flex items-center justify-center gap-3"
           >
             Créer la page du projet
             <X className="rotate-45" size={18} />

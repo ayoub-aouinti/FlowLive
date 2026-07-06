@@ -198,25 +198,26 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-1 transition-colors duration-300">
-      <div className="flex items-center gap-4 mb-8 pt-4">
+      {/* Page header */}
+      <div className="flex items-center gap-4 mb-6 pt-5">
         <div>
-          <h1 className="text-[40px] font-black text-[var(--notion-text)] leading-tight">
+          <h1 className="text-3xl font-bold text-[var(--notion-text)] leading-tight tracking-tight">
             {deptConfig?.workspaceTitle || deptConfig?.departmentName || 'Badgi-WorkFlow'}
           </h1>
-          <p className="text-[var(--notion-text-light)] text-sm font-medium -mt-1 tracking-tight">
+          <p className="text-[var(--notion-text-light)] text-sm mt-1">
             {deptConfig?.workspaceSubtitle || 'Badgi-WorkFlow'}
           </p>
         </div>
       </div>
 
-      {/* Tab bar: tabs scroll independently, action buttons stay outside overflow so dropdowns aren't clipped */}
+      {/* Tab bar */}
       <div className="flex items-center border-b border-[var(--notion-border)] mb-4">
         {/* Scrollable tabs */}
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1 min-w-0">
           {isPageActive('table') && (
             <button
               onClick={() => setView('table')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'table' ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)] font-semibold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)] hover:text-[var(--notion-text)]'}`}
             >
               <TableIcon size={14} />
               {t('dashboard.table')}
@@ -225,7 +226,7 @@ const Dashboard: React.FC = () => {
           {isPageActive('kanban') && (
             <button
               onClick={() => setView('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'kanban' ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)] font-semibold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)] hover:text-[var(--notion-text)]'}`}
             >
               <Columns size={14} />
               {t('dashboard.kanban')}
@@ -234,7 +235,7 @@ const Dashboard: React.FC = () => {
           {isPageActive('timeline') && (
             <button
               onClick={() => setView('timeline')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors whitespace-nowrap border-b-2 ${view === 'timeline' ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)] font-semibold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)] hover:text-[var(--notion-text)]'}`}
             >
               <CalendarIcon size={14} />
               {t('dashboard.timeline')}
@@ -243,7 +244,7 @@ const Dashboard: React.FC = () => {
           {isPageActive('calendrier') && (
             <button
               onClick={() => setView('calendrier')}
-              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'calendrier' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'calendrier' ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)] font-semibold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)] hover:text-[var(--notion-text)]'}`}
             >
               <CalendarIcon size={14} />
               {t('dashboard.calendar')}
@@ -252,7 +253,7 @@ const Dashboard: React.FC = () => {
           {isPageActive('reporting') && (
             <button
               onClick={() => setView('reporting')}
-              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'reporting' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'reporting' ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)] font-semibold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)] hover:text-[var(--notion-text)]'}`}
             >
               <BarChart2 size={14} />
               {t('dashboard.reporting')}
@@ -261,7 +262,7 @@ const Dashboard: React.FC = () => {
           {isPageActive('urgences') && (
             <button
               onClick={() => setView('urgences')}
-              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'urgences' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'urgences' ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)] font-semibold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)] hover:text-[var(--notion-text)]'}`}
             >
               <AlertCircle size={14} className="text-[#e11d48]" />
               {t('dashboard.urgencies')}
@@ -270,7 +271,7 @@ const Dashboard: React.FC = () => {
           {isPageActive('stats') && (
             <button
               onClick={() => setView('stats')}
-              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'stats' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)]'}`}
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all text-sm font-medium whitespace-nowrap ${view === 'stats' ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)] font-semibold' : 'border-transparent text-[var(--notion-text-light)] hover:bg-[var(--notion-hover)] hover:text-[var(--notion-text)]'}`}
             >
               <PieChart size={14} />
               {t('dashboard.stats')}
@@ -283,7 +284,7 @@ const Dashboard: React.FC = () => {
           {/* Search */}
           <button
             onClick={() => { setShowSearch(v => !v); if (showSearch) setSearchQuery(''); }}
-            className={`p-1.5 rounded transition-colors ${showSearch ? 'bg-[var(--brand-primary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
+            className={`p-1.5 rounded transition-colors ${showSearch ? 'bg-[var(--brand-secondary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
             title="Rechercher"
           ><Search size={16} /></button>
 
@@ -291,7 +292,7 @@ const Dashboard: React.FC = () => {
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => { setShowFilterPanel(v => !v); setShowSortPanel(false); }}
-              className={`p-1.5 rounded transition-colors relative ${showFilterPanel || activeFilterCount > 0 ? 'bg-[var(--brand-primary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
+              className={`p-1.5 rounded transition-colors relative ${showFilterPanel || activeFilterCount > 0 ? 'bg-[var(--brand-secondary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
               title="Filtrer"
             >
               <Filter size={16} />
@@ -300,14 +301,14 @@ const Dashboard: React.FC = () => {
               )}
             </button>
             {showFilterPanel && (
-              <div className="absolute right-0 top-full mt-2 z-50 w-72 bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-xl shadow-2xl p-4 space-y-4">
+              <div className="absolute right-0 top-full mt-2 z-50 w-72 bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-xl shadow-[var(--shadow-elevated)] p-4 space-y-4">
                 <div>
                   <div className="text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-widest mb-2">Statut</div>
                   <div className="flex flex-wrap gap-1.5">
                     {['Nouveau', 'En cours', 'En révision', 'Terminé'].map(s => (
                       <button key={s}
                         onClick={() => setFilterStatus(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
-                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterStatus.includes(s) ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-[var(--brand-primary)]'}`}
+                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterStatus.includes(s) ? 'bg-[var(--brand-secondary)] text-white border-[var(--brand-secondary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-[var(--brand-secondary)]'}`}
                       >{s}</button>
                     ))}
                   </div>
@@ -318,7 +319,7 @@ const Dashboard: React.FC = () => {
                     {['Haute', 'Moyenne', 'Basse'].map(p => (
                       <button key={p}
                         onClick={() => setFilterPriority(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])}
-                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterPriority.includes(p) ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-[var(--brand-primary)]'}`}
+                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterPriority.includes(p) ? 'bg-[var(--brand-secondary)] text-white border-[var(--brand-secondary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-[var(--brand-secondary)]'}`}
                       >{p}</button>
                     ))}
                   </div>
@@ -344,11 +345,11 @@ const Dashboard: React.FC = () => {
           <div className="relative" ref={sortRef}>
             <button
               onClick={() => { setShowSortPanel(v => !v); setShowFilterPanel(false); }}
-              className={`p-1.5 rounded transition-colors ${showSortPanel ? 'bg-[var(--brand-primary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
+              className={`p-1.5 rounded transition-colors ${showSortPanel ? 'bg-[var(--brand-secondary)] text-white' : 'hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)]'}`}
               title="Trier"
             ><ArrowUpDown size={16} /></button>
             {showSortPanel && (
-              <div className="absolute right-0 top-full mt-2 z-50 w-56 bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-xl shadow-2xl p-2">
+              <div className="absolute right-0 top-full mt-2 z-50 w-56 bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-xl shadow-[var(--shadow-elevated)] p-2">
                 {[
                   { field: 'deadline', label: 'Deadline' },
                   { field: 'name', label: 'Nom' },
@@ -363,8 +364,8 @@ const Dashboard: React.FC = () => {
                     <span>{opt.label}</span>
                     {sortField === opt.field && (
                       sortDir === 'asc'
-                        ? <ChevronUp size={14} className="text-[var(--brand-primary)]" />
-                        : <ChevronDownIcon size={14} className="text-[var(--brand-primary)]" />
+                        ? <ChevronUp size={14} className="text-[var(--brand-secondary)]" />
+                        : <ChevronDownIcon size={14} className="text-[var(--brand-secondary)]" />
                     )}
                   </button>
                 ))}
@@ -375,7 +376,7 @@ const Dashboard: React.FC = () => {
           {token && JSON.parse(atob(token.split('.')[1])).role === 'chef de produit' && (
             <button 
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1 bg-[var(--brand-primary)] hover:bg-slate-700 text-white dark:text-slate-900 text-xs font-bold px-3 py-1.5 rounded transition-all shadow-md active:scale-95"
+              className="flex items-center gap-1 bg-[var(--brand-secondary)] hover:bg-[var(--brand-primary)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95" style={{ boxShadow: 'var(--shadow-btn)' }}
             >
               {t('common.new')}
               <Plus size={14} />
@@ -395,7 +396,7 @@ const Dashboard: React.FC = () => {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             onKeyDown={e => e.key === 'Escape' && (setShowSearch(false), setSearchQuery(''))}
-            className="w-full pl-8 pr-8 py-2 text-sm bg-[var(--notion-hover)] border border-[var(--notion-border)] rounded-lg outline-none focus:border-[var(--brand-primary)] text-[var(--notion-text)] placeholder:text-[var(--notion-text-light)] transition-all"
+            className="w-full pl-8 pr-8 py-2 text-sm bg-[var(--notion-hover)] border border-[var(--notion-border)] rounded-lg outline-none focus:border-[var(--brand-secondary)] text-[var(--notion-text)] placeholder:text-[var(--notion-text-light)] transition-all"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="absolute right-3 text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-colors">
@@ -415,7 +416,7 @@ const Dashboard: React.FC = () => {
             </span>
           )}
           {filterStatus.map(s => (
-            <span key={s} className="flex items-center gap-1 text-[11px] font-semibold bg-[var(--brand-primary)] text-white px-2 py-1 rounded-full">
+            <span key={s} className="flex items-center gap-1 text-[11px] font-semibold bg-[var(--brand-secondary)] text-white px-2 py-1 rounded-full">
               {s} <button onClick={() => setFilterStatus(prev => prev.filter(x => x !== s))}><X size={10} /></button>
             </span>
           ))}
@@ -442,7 +443,7 @@ const Dashboard: React.FC = () => {
         {view === 'urgences' && <ReportingView projects={displayedProjects.filter(p => p.urgent)} />}
         {view === 'stats' && <StatsView projects={displayedProjects} />}
         {view === 'demarrer' && (
-          <div className="bg-[var(--notion-bg)] rounded-lg border border-[var(--notion-border)] shadow-sm animate-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-[var(--notion-sidebar)] rounded-2xl border border-[var(--notion-border)] shadow-[var(--shadow-card)] animate-in slide-in-from-bottom-4 duration-500">
              <ProjectForm />
           </div>
         )}
@@ -450,7 +451,7 @@ const Dashboard: React.FC = () => {
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-[var(--notion-bg)] w-[90%] max-w-4xl h-[90vh] rounded-lg shadow-2xl overflow-hidden relative translate-y-2 animate-in fade-in zoom-in duration-200">
+          <div className="bg-[var(--notion-sidebar)] w-[90%] max-w-4xl h-[90vh] rounded-2xl shadow-[var(--shadow-elevated)] overflow-hidden relative translate-y-2 animate-in fade-in zoom-in duration-200">
             <ProjectForm onClose={() => setShowAddModal(false)} />
           </div>
         </div>
@@ -459,7 +460,23 @@ const Dashboard: React.FC = () => {
   );
 };
 
-const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields, theme, t }: {
+const statusPill = (status: string) => {
+  switch (status) {
+    case 'Terminé':    return 'bg-emerald-100 text-emerald-700';
+    case 'En cours':   return 'bg-[var(--surface-high)] text-[var(--brand-secondary)]';
+    case 'En révision':return 'bg-amber-100 text-amber-700';
+    default:           return 'bg-[var(--surface-low)] text-[var(--notion-text-light)]';
+  }
+};
+const priorityPill = (priority: string) => {
+  switch (priority) {
+    case 'Haute':   return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
+    case 'Moyenne': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+    default:        return 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
+  }
+};
+
+const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields, t }: {
   projects: Project[],
   getUserName: (u: string | User | undefined) => string,
   userRole: string,
@@ -470,117 +487,131 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
 }) => {
   const fields = formFields && formFields.length > 0 ? formFields : [];
 
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-[var(--notion-text-light)]">
+        <FileIcon size={40} />
+        <p className="mt-4 text-sm font-medium">Aucun projet à afficher</p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto -mx-12 px-12">
-      <table className="w-full text-left border-collapse min-w-[900px]">
-        <thead>
-          <tr className="text-[var(--notion-text-light)] text-[12px] font-normal border-y border-[var(--notion-border)]">
-            <th className="px-2 py-2 border-r border-[var(--notion-border)] font-normal w-[28%]">{t('project.name')}</th>
-            {fields.map(f => (
-              <th key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] font-normal">{f.label}</th>
-            ))}
-            <th className="px-2 py-2 font-normal w-[12%]">{t('project.status')}</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[var(--notion-border)]">
-          {projects.map((p) => (
-            <tr key={p._id} className="hover:bg-[var(--notion-hover)] transition-colors group text-sm">
-              <td className="px-2 py-2 border-r border-[var(--notion-border)]">
-                <div className="flex items-center gap-2">
-                  <FileIcon />
-                  <span className="text-[var(--notion-text)] truncate">{p.name}</span>
-                </div>
-              </td>
-              {fields.map(f => {
-                if (f.id === 'f_initiator') {
-                  return (
-                    <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)]">
-                      <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-100 px-1.5 py-0.5 rounded text-[12px] font-medium border border-purple-200 dark:border-purple-500/30">
-                        {p.initiatorName || '-'}
-                      </span>
-                    </td>
-                  );
-                }
-                if (f.type === 'user') {
-                  return (
-                    <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)]">
-                      <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-100 px-1.5 py-0.5 rounded text-[12px] font-medium border border-blue-200 dark:border-blue-500/30">
-                        {getUserName(p.assignedTo)}
-                      </span>
-                    </td>
-                  );
-                }
-                if (f.type === 'checkbox') {
-                  const val = f.id === 'f_urgent' ? p.urgent : !!(p._customFields?.[f.id]);
-                  return (
-                    <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] text-center">
-                      <input type="checkbox" checked={!!val} readOnly className="rounded border-[var(--notion-border)] text-[var(--brand-accent)] focus:ring-0" />
-                    </td>
-                  );
-                }
-                if (f.type === 'select' && f.id === 'f_priority') {
-                  return (
-                    <td key={f.id} className="px-2 py-1 border-r border-[var(--notion-border)]">
-                      <span className={`px-1.5 py-0.5 rounded text-[12px] font-medium ${getPriorityColor(p.priority, theme)}`}>{p.priority}</span>
-                    </td>
-                  );
-                }
-                if (f.type === 'attachment') {
-                  const raw = p._customFields?.[f.id];
-                  if (!raw) return (
-                    <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] text-[var(--notion-text-light)] text-[12px]">—</td>
-                  );
-                  try {
-                    const att = JSON.parse(raw as string) as { name: string; data: string; mimeType: string; size: number };
+      <div
+        className="min-w-[900px] bg-[var(--notion-sidebar)] rounded-xl border border-[var(--notion-border)] overflow-hidden"
+        style={{ boxShadow: 'var(--shadow-card)' }}
+      >
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-[var(--surface-low)] text-[var(--notion-text-light)] text-[11px] font-semibold uppercase tracking-wide border-b border-[var(--notion-border)]">
+              <th className="px-4 py-3 border-r border-[var(--notion-border)] w-[28%]">{t('project.name')}</th>
+              {fields.map(f => (
+                <th key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)]">{f.label}</th>
+              ))}
+              <th className="px-4 py-3 w-[12%]">{t('project.status')}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--notion-border)]">
+            {projects.map((p) => (
+              <tr key={p._id} className="hover:bg-[var(--notion-hover)] transition-colors group text-sm">
+                <td className="px-4 py-3 border-r border-[var(--notion-border)]">
+                  <div className="flex items-center gap-2.5">
+                    <FileIcon />
+                    <span className="text-[var(--notion-text)] font-medium truncate">{p.name}</span>
+                  </div>
+                </td>
+                {fields.map(f => {
+                  if (f.id === 'f_initiator') {
                     return (
-                      <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)]">
-                        <a
-                          href={att.data}
-                          download={att.name}
-                          title={`${att.name} (${(att.size / 1024).toFixed(0)} Ko)`}
-                          className="flex items-center gap-1.5 text-[var(--brand-primary)] hover:underline text-[11px] font-medium max-w-[140px] truncate"
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <Paperclip size={11} className="flex-shrink-0" />
-                          <span className="truncate">{att.name}</span>
-                        </a>
+                      <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)]">
+                        <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 px-2 py-0.5 rounded-md text-[11px] font-semibold">
+                          {p.initiatorName || '-'}
+                        </span>
                       </td>
                     );
-                  } catch {
+                  }
+                  if (f.type === 'user') {
                     return (
-                      <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] text-[var(--notion-text-light)] text-[12px]">—</td>
+                      <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)]">
+                        <span className="bg-[var(--surface-high)] text-[var(--brand-secondary)] px-2 py-0.5 rounded-md text-[11px] font-semibold">
+                          {getUserName(p.assignedTo)}
+                        </span>
+                      </td>
                     );
                   }
-                }
-                return (
-                  <td key={f.id} className="px-2 py-2 border-r border-[var(--notion-border)] text-[var(--notion-text)]">
-                     {p._customFields?.[f.id] ? String(p._customFields[f.id]) : '-'}
-                  </td>
-                );
-              })}
-              <td className="px-2 py-2 border-r border-[var(--notion-border)]">
-                {userRole === 'worker' ? (
-                  <select
-                    className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[12px] font-medium outline-none border-none cursor-pointer ${getStatusColor(p.status, theme)}`}
-                    value={p.status}
-                    onChange={(e) => onUpdateStatus(p._id, e.target.value)}
-                  >
-                    <option value="Nouveau">Nouveau</option>
-                    <option value="En cours">En cours</option>
-                    <option value="En révision">En révision</option>
-                    <option value="Terminé">Terminé</option>
-                  </select>
-                ) : (
-                  <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[12px] font-medium ${getStatusColor(p.status, theme)}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'Terminé' ? 'bg-current' : 'bg-current'}`} />
-                    {p.status}
-                  </span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  if (f.type === 'checkbox') {
+                    const val = f.id === 'f_urgent' ? p.urgent : !!(p._customFields?.[f.id]);
+                    return (
+                      <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)] text-center">
+                        <input type="checkbox" checked={!!val} readOnly className="rounded border-[var(--notion-border)] text-[var(--brand-accent)] focus:ring-0 cursor-default" />
+                      </td>
+                    );
+                  }
+                  if (f.type === 'select' && f.id === 'f_priority') {
+                    return (
+                      <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)]">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${priorityPill(p.priority)}`}>{p.priority}</span>
+                      </td>
+                    );
+                  }
+                  if (f.type === 'attachment') {
+                    const raw = p._customFields?.[f.id];
+                    if (!raw) return (
+                      <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)] text-[var(--notion-text-light)] text-[12px]">—</td>
+                    );
+                    try {
+                      const att = JSON.parse(raw as string) as { name: string; data: string; mimeType: string; size: number };
+                      return (
+                        <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)]">
+                          <a
+                            href={att.data}
+                            download={att.name}
+                            title={`${att.name} (${(att.size / 1024).toFixed(0)} Ko)`}
+                            className="flex items-center gap-1.5 text-[var(--brand-secondary)] hover:underline text-[11px] font-medium max-w-[140px] truncate"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <Paperclip size={11} className="flex-shrink-0" />
+                            <span className="truncate">{att.name}</span>
+                          </a>
+                        </td>
+                      );
+                    } catch {
+                      return (
+                        <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)] text-[var(--notion-text-light)] text-[12px]">—</td>
+                      );
+                    }
+                  }
+                  return (
+                    <td key={f.id} className="px-4 py-3 border-r border-[var(--notion-border)] text-[var(--notion-text)]">
+                      {p._customFields?.[f.id] ? String(p._customFields[f.id]) : <span className="text-[var(--notion-text-light)]">—</span>}
+                    </td>
+                  );
+                })}
+                <td className="px-4 py-3">
+                  {userRole === 'worker' ? (
+                    <select
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold outline-none border-none cursor-pointer ${statusPill(p.status)}`}
+                      value={p.status}
+                      onChange={(e) => onUpdateStatus(p._id, e.target.value)}
+                    >
+                      <option value="Nouveau">Nouveau</option>
+                      <option value="En cours">En cours</option>
+                      <option value="En révision">En révision</option>
+                      <option value="Terminé">Terminé</option>
+                    </select>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold ${statusPill(p.status)}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      {p.status}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
@@ -625,6 +656,15 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
     setDragOverCol(null);
   };
 
+  const colAccentClass = (col: string) => {
+    switch (col) {
+      case 'Terminé':    return 'bg-emerald-500';
+      case 'En cours':   return 'bg-[var(--brand-secondary)]';
+      case 'En révision':return 'bg-amber-400';
+      default:           return 'bg-slate-300';
+    }
+  };
+
   return (
     <div className="flex gap-4 overflow-x-auto pb-8 -mx-12 px-12 scrollbar-hide">
       {columns.map(col => {
@@ -644,15 +684,14 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
             onDrop={(e) => handleDrop(e, col)}
           >
             {/* Column header */}
-            <div className="flex items-center gap-2 mb-2 px-2">
-              <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide ${getStatusColor(col, theme)}`}>
-                {col}
-              </span>
-              <span className="text-[var(--notion-text-light)] text-xs font-medium">{pCol.length}</span>
+            <div className="flex items-center gap-2.5 mb-3 px-1">
+              <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${colAccentClass(col)}`} />
+              <span className="text-sm font-semibold text-[var(--notion-text)]">{col}</span>
+              <span className="ml-auto text-xs font-semibold text-[var(--notion-text-light)] bg-[var(--notion-hover)] px-2 py-0.5 rounded-full">{pCol.length}</span>
             </div>
 
             {/* Drop zone */}
-            <div className={`space-y-2 flex-1 rounded-xl p-1 min-h-[80px] transition-all duration-150 ${isDroppingHere ? 'bg-[var(--brand-primary)]/5 ring-2 ring-[var(--brand-primary)] ring-dashed' : ''}`}>
+            <div className={`space-y-2.5 flex-1 rounded-xl p-1.5 min-h-[80px] transition-all duration-150 ${isDroppingHere ? 'bg-[var(--surface-low)] ring-2 ring-[var(--brand-secondary)] ring-dashed' : 'bg-[var(--notion-bg)]'}`}>
               {pCol.map(p => {
                 const isDragging = draggedId === p._id;
                 const overdue = isOverdue(p);
@@ -662,11 +701,12 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
                     draggable
                     onDragStart={(e) => handleDragStart(e, p._id)}
                     onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
-                    className={`rounded-md shadow-sm p-3 transition-all duration-150 group select-none border
+                    className={`rounded-xl p-3.5 transition-all duration-150 select-none border
                       ${overdue
-                        ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-400 dark:border-rose-700 shadow-rose-100 dark:shadow-rose-900/20'
-                        : 'bg-[var(--notion-bg)] border-[var(--notion-border)]'}
-                      ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : 'hover:shadow-md cursor-grab active:cursor-grabbing active:scale-[0.98]'}`}
+                        ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800'
+                        : 'bg-[var(--notion-sidebar)] border-[var(--notion-border)]'}
+                      ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : 'cursor-grab active:cursor-grabbing active:scale-[0.98]'}`}
+                    style={!isDragging && !overdue ? { boxShadow: 'var(--shadow-card)' } : undefined}
                   >
                     {/* Overdue banner */}
                     {overdue && (
@@ -676,28 +716,37 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 mb-2 text-sm font-medium text-[var(--notion-text)]">
+                    <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-[var(--notion-text)]">
                       <FileIcon />
-                      <span className="truncate">{p.name}</span>
+                      <span className="truncate leading-snug">{p.name}</span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 mt-3 justify-between items-center">
+
+                    {/* Deadline row */}
+                    {p.deadline && (
+                      <div className="text-[10px] text-[var(--notion-text-light)] mb-2.5 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--notion-border)] inline-block" />
+                        {new Date(p.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-1.5 justify-between items-center">
                       <div className="flex flex-wrap gap-1.5">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getPriorityColor(p.priority, theme)}`}>
+                        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${priorityPill(p.priority)}`}>
                           {p.priority}
                         </span>
                         {p.product && (
-                          <span className="text-[10px] text-[var(--notion-text-light)] bg-[var(--notion-hover)] px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] text-[var(--notion-text-light)] bg-[var(--notion-hover)] px-1.5 py-0.5 rounded-md font-medium">
                             {p.product}
                           </span>
                         )}
                         {p.urgent && (
-                          <span className="text-[10px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                          <span className="text-[10px] font-bold text-rose-600 bg-rose-100 dark:bg-rose-900/20 px-1.5 py-0.5 rounded-md border border-rose-200 dark:border-rose-800">
                             Urgent
                           </span>
                         )}
                       </div>
                       {showAssignee && p.assignedTo && (
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-100 px-1.5 py-0.5 rounded text-[10px] font-medium border border-blue-200 dark:border-blue-500/30">
+                        <span className="bg-[var(--surface-high)] text-[var(--brand-secondary)] px-1.5 py-0.5 rounded-md text-[10px] font-semibold">
                           {getUserName(p.assignedTo)}
                         </span>
                       )}
@@ -708,8 +757,8 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
 
               {/* Empty column drop hint */}
               {pCol.length === 0 && (
-                <div className={`h-16 rounded-lg border-2 border-dashed flex items-center justify-center text-[11px] font-medium transition-all ${isDroppingHere ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)]'}`}>
-                  {isDroppingHere ? 'Déposer ici' : 'Aucune carte'}
+                <div className={`h-20 rounded-xl border-2 border-dashed flex items-center justify-center text-[11px] font-medium transition-all ${isDroppingHere ? 'border-[var(--brand-secondary)] text-[var(--brand-secondary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)]'}`}>
+                  {isDroppingHere ? '↓ Déposer ici' : 'Aucune carte'}
                 </div>
               )}
             </div>
@@ -730,26 +779,72 @@ const TimelineView = ({ projects, getUserName, theme }: { projects: Project[], g
     return Array.from(unique);
   }, [projects, getUserName]);
 
+  const today = new Date();
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i - 3);
+    return d;
+  });
+
   return (
-    <div className="border border-[var(--notion-border)] rounded-lg overflow-hidden -mx-12">
-      <div className="flex h-10 border-b border-[var(--notion-border)] bg-[var(--notion-sidebar)]">
-         <div className="w-48 border-r border-[var(--notion-border)] flex items-center px-4 text-xs font-bold text-[var(--notion-text-light)] uppercase whitespace-nowrap">Equipe</div>
-         <div className="flex-1 overflow-x-auto flex items-center px-4 gap-8 text-[11px] font-bold text-[var(--notion-text-light)] uppercase whitespace-nowrap">
-           <span>18 Mar</span><span>19 Mar</span><span>20 Mar</span><span className="text-[#eb5757]">21 Mar</span><span>22 Mar</span><span>23 Mar</span><span>24 Mar</span>
-         </div>
+    <div
+      className="rounded-xl border border-[var(--notion-border)] overflow-hidden -mx-12 bg-[var(--notion-sidebar)]"
+      style={{ boxShadow: 'var(--shadow-card)' }}
+    >
+      {/* Header */}
+      <div className="flex h-11 border-b border-[var(--notion-border)] bg-[var(--surface-low)]">
+        <div className="w-52 shrink-0 border-r border-[var(--notion-border)] flex items-center px-4 text-[11px] font-semibold text-[var(--notion-text-light)] uppercase tracking-wide">
+          Équipe
+        </div>
+        <div className="flex-1 overflow-x-auto flex">
+          {weekDays.map((d, i) => {
+            const isToday = d.toDateString() === today.toDateString();
+            return (
+              <div
+                key={i}
+                className={`flex-1 min-w-[100px] flex items-center justify-center text-[11px] font-semibold uppercase tracking-wide border-r border-[var(--notion-border)] last:border-r-0 ${isToday ? 'text-[var(--brand-secondary)] bg-[var(--surface-mid)]' : 'text-[var(--notion-text-light)]'}`}
+              >
+                {d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Rows */}
       <div className="divide-y divide-[var(--notion-border)]">
-        {userList.map(name => (
-          <div key={name} className="flex">
-            <div className="w-48 border-r border-[var(--notion-border)] py-3 px-4 flex items-center gap-2">
-              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getStatusColor('En cours', theme)}`}>{name}</span>
+        {userList.length === 0 ? (
+          <div className="flex items-center justify-center py-16 text-[var(--notion-text-light)] text-sm">
+            Aucun membre assigné
+          </div>
+        ) : userList.map(name => (
+          <div key={name} className="flex hover:bg-[var(--notion-hover)] transition-colors">
+            <div className="w-52 shrink-0 border-r border-[var(--notion-border)] py-4 px-4 flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-[var(--brand-secondary)] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                {name[0]?.toUpperCase()}
+              </div>
+              <span className="text-sm font-medium text-[var(--notion-text)] truncate">{name}</span>
             </div>
-            <div className="flex-1 p-2 relative">
-               {projects.filter(p => getUserName(p.assignedTo) === name).map((p) => (
-                 <div key={p._id} className="bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded px-3 py-1.5 text-xs shadow-sm mb-1 inline-block ml-4 text-[var(--notion-text)]">
-                   {p.name}
-                 </div>
-               ))}
+            <div className="flex-1 flex relative overflow-x-auto">
+              {weekDays.map((_, i) => (
+                <div key={i} className="flex-1 min-w-[100px] border-r border-[var(--notion-border)] last:border-r-0 relative py-2 px-1.5">
+                  {projects
+                    .filter(p => getUserName(p.assignedTo) === name)
+                    .filter(p => {
+                      const dl = new Date(p.deadline);
+                      return dl.toDateString() === weekDays[i].toDateString();
+                    })
+                    .map(p => (
+                      <div
+                        key={p._id}
+                        className="bg-[var(--surface-high)] text-[var(--brand-secondary)] rounded-lg px-2 py-1 text-[10px] font-semibold mb-1 truncate border border-[var(--surface-mid)]"
+                        title={p.name}
+                      >
+                        {p.name}
+                      </div>
+                    ))}
+                </div>
+              ))}
             </div>
           </div>
         ))}

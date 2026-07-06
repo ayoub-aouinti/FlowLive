@@ -81,13 +81,11 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0">
         {/* Cover Image Area */}
-        <div className="h-48 w-full relative group bg-slate-100">
+        <div className="h-44 w-full relative group bg-[var(--surface-low)]">
           {config?.coverUrl ? (
             <img src={config.coverUrl} className="w-full h-full object-cover" alt="Cover" />
           ) : (
-            <div 
-              className="w-full h-full bg-gradient-to-r from-[#1e293b] to-[#475569]"
-            />
+            <div className="w-full h-full bg-gradient-to-135 from-[var(--brand-primary)] via-[var(--brand-secondary)] to-[#0ea5e9]" style={{ background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 60%, #0ea5e9 100%)' }} />
           )}
           
           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />

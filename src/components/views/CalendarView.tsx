@@ -259,10 +259,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[var(--notion-bg)] select-none animate-in fade-in duration-300">
+    <div className="flex flex-col h-full bg-[var(--notion-sidebar)] rounded-xl border border-[var(--notion-border)] select-none animate-in fade-in duration-300 overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
 
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--notion-border)] bg-[var(--notion-sidebar)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--notion-border)] bg-[var(--surface-low)]">
 
         {/* Left: navigation */}
         <div className="flex items-center gap-3">
@@ -337,12 +337,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
       </div>
 
       {/* ── Day-of-week header ── */}
-      <div className="grid grid-cols-7 border-b border-[var(--notion-border)]">
+      <div className="grid grid-cols-7 border-b border-[var(--notion-border)] bg-[var(--surface-low)]">
         {DAYS.map((d, i) => (
           <div key={d}
-            className={`py-2 text-center text-[10px] font-bold uppercase tracking-wider border-r border-[var(--notion-border)] last:border-r-0
+            className={`py-2 text-center text-[10px] font-semibold uppercase tracking-wider border-r border-[var(--notion-border)] last:border-r-0
               ${i === 0 || i === 6
-                ? 'text-slate-400 dark:text-slate-600 bg-slate-50 dark:bg-slate-900/50'
+                ? 'text-slate-400 dark:text-slate-600'
                 : 'text-[var(--notion-text-light)]'}`}>
             {d}
           </div>
@@ -492,7 +492,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
       {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowModal(false)}>
-          <div className="bg-[var(--notion-bg)] border border-[var(--notion-border)] rounded-2xl shadow-2xl w-full max-w-sm"
+          <div className="bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-2xl w-full max-w-sm" style={{ boxShadow: 'var(--shadow-elevated)' }}
             onClick={e => e.stopPropagation()}>
 
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[var(--notion-border)]">

@@ -1,16 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { UserPlus, Lock, User as UserIcon, Loader2, CheckCircle, Sun, Moon } from 'lucide-react';
-import logo from '../assets/logo.png';
+import { Lock, User as UserIcon, Mail, Loader2, CheckCircle, ArrowRight } from 'lucide-react';
+const logo = '/logo.png';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../context/ThemeContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
+const Field: React.FC<{
+  label: string;
+  icon: React.ElementType;
+  type: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  minLength?: number;
+}> = ({ label, icon: Icon, type, placeholder, value, onChange, required, minLength }) => (
+  <div>
+    <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--notion-text-light)] mb-1.5">
+      {label}
+    </label>
+    <div className="relative">
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--notion-text-light)]" />
+      <input
+        type={type}
+        required={required}
+        minLength={minLength}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full pl-10 pr-4 py-2.5 bg-[var(--surface-low)] border border-[var(--notion-border)] rounded-xl text-[var(--notion-text)] text-sm outline-none transition-all focus:ring-2 focus:ring-[var(--brand-primary)]/10 focus:border-[var(--brand-primary)] placeholder:text-[var(--notion-text-light)]/60"
+      />
+    </div>
+  </div>
+);
+
 export default function SignupPage() {
   const { t } = useTranslation();
-  const { theme, toggleTheme } = useTheme();
   const { token } = useParams();
   const navigate = useNavigate();
   const [inviteData, setInviteData] = useState<{ email: string; role: string } | null>(null);
@@ -18,11 +45,7 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [formData, setFormData] = useState({ name: '', password: '', confirmPassword: '' });
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -30,11 +53,8 @@ export default function SignupPage() {
         const res = await axios.get(`${API_URL}/api/invitations/verify/${token}`);
         setInviteData(res.data);
       } catch (err: unknown) {
-        if (axios.isAxiosError(err)) {
-          setError(err.response?.data?.message || t('auth.invalid_link'));
-        } else {
-          setError(t('common.error_unexpected'));
-        }
+        if (axios.isAxiosError(err)) setError(err.response?.data?.message || t('auth.invalid_link'));
+        else setError(t('common.error_unexpected'));
       } finally {
         setLoading(false);
       }
@@ -44,157 +64,177 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      return setError(t('auth.passwords_dont_match'));
-    }
+    if (formData.password !== formData.confirmPassword) return setError(t('auth.passwords_dont_match'));
     setError(null);
     setSubmitting(true);
     try {
       await axios.post(`${API_URL}/api/auth/complete-signup`, {
         token,
         name: formData.name,
-        password: formData.password
+        password: formData.password,
       });
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || t('auth.signup_error'));
-      } else {
-        setError(t('auth.signup_error'));
-      }
+      if (axios.isAxiosError(err)) setError(err.response?.data?.message || t('auth.signup_error'));
+      else setError(t('auth.signup_error'));
       setSubmitting(false);
     }
   };
 
+  const bgStyle = { background: 'radial-gradient(circle at top left, #f8f9ff 0%, #eff4ff 100%)' };
+  const cardShadow = { boxShadow: '0 20px 60px -12px rgba(0,35,111,0.12)' };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--notion-bg)] transition-colors duration-300">
-        <Loader2 className="w-10 h-10 text-[var(--notion-text)] animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={bgStyle}>
+        <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--notion-bg)] p-4 font-inter transition-colors duration-300">
-      <button 
-        onClick={toggleTheme}
-        className="fixed top-6 right-6 p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-[var(--notion-border)] text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-all"
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={bgStyle}>
+      {/* Atmospheric blobs */}
+      <div
+        className="pointer-events-none fixed top-[-160px] right-[-160px] w-[520px] h-[520px] rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(0,88,190,0.07) 0%, transparent 70%)' }}
+      />
+      <div
+        className="pointer-events-none fixed bottom-[-100px] left-[-100px] w-[380px] h-[380px] rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(0,35,111,0.05) 0%, transparent 70%)' }}
+      />
+
+      <div
+        className="relative w-full max-w-[420px] bg-[var(--notion-sidebar)] rounded-2xl border border-[var(--notion-border)] overflow-hidden"
+        style={cardShadow}
       >
-        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
+        {/* Accent top bar */}
+        <div className="h-1 bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-secondary)] to-[#38bdf8]" />
 
-      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 max-w-md w-full border border-[var(--notion-border)] animate-in slide-in-from-bottom duration-500">
-        {success ? (
-          <div className="text-center animate-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-[var(--notion-text)]" />
-            </div>
-            <h2 className="text-2xl font-bold text-[var(--notion-text)] mb-2">{t('auth.account_created_title') || 'Compte créé !'}</h2>
-            <p className="text-[var(--notion-text-light)] mb-6">{t('auth.account_created_desc') || 'Votre compte est maintenant prêt. Vous allez être redirigé...'}</p>
-            <div className="w-full bg-slate-50 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-slate-800 dark:bg-slate-200 h-full animate-progress-bar" style={{ animation: 'progress 3s linear' }} />
-            </div>
-          </div>
-        ) : error && !inviteData ? (
-          <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <UserPlus className="w-8 h-8 text-red-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-[var(--notion-text)] mb-2">{t('common.error') || 'Oups !'}</h2>
-            <p className="text-[var(--notion-text-light)] mb-6">{error}</p>
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full py-3 bg-[var(--notion-sidebar)] text-[var(--notion-text)] rounded-xl font-bold hover:bg-[var(--notion-hover)] transition-all"
-            >
-              {t('auth.back_to_login') || 'Retour à la connexion'}
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="text-center mb-8">
-              <img src={logo} alt="Badgi-WorkFlow" className="h-16 w-auto mx-auto mb-4" />
-              <h1 className="text-2xl font-bold text-[var(--notion-text)]">{t('auth.signup_title') || 'Finalisez votre inscription'}</h1>
-              <p className="text-[var(--notion-text-light)] mt-2">{t('auth.signup_subtitle') || 'Bienvenue parmi nous ! Configurez votre profil.'}</p>
-            </div>
-
-            <div className="bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-2xl p-4 mb-8 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center shadow-sm">
-                <UserIcon className="w-5 h-5 text-[var(--brand-primary)]" />
+        <div className="p-8">
+          {success ? (
+            <div className="text-center py-4">
+              <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <CheckCircle className="w-8 h-8 text-emerald-500" />
               </div>
-              <div>
-                <p className="text-xs text-[var(--notion-text-light)] font-bold uppercase tracking-wider">{t('auth.invited_account') || 'Compte invité'}</p>
-                <p className="text-[var(--notion-text)] font-medium">{inviteData?.email}</p>
+              <h2 className="text-xl font-bold text-[var(--notion-text)] mb-3">
+                {t('auth.account_created_title') || 'Compte créé !'}
+              </h2>
+              <p className="text-sm text-[var(--notion-text-light)] mb-6">
+                {t('auth.account_created_desc') || 'Redirection en cours...'}
+              </p>
+              <div className="w-full bg-[var(--surface-low)] h-1 rounded-full overflow-hidden">
+                <div
+                  className="bg-[var(--brand-primary)] h-full rounded-full"
+                  style={{ animation: 'progress-fill 3s linear forwards' }}
+                />
               </div>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-[var(--notion-text)] mb-2">{t('project.initiator')}</label>
-                <div className="relative">
-                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--notion-text-light)]" />
-                  <input
-                    type="text"
-                    required
-                    className="w-full pl-12 pr-4 py-3 bg-[var(--notion-sidebar)] dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl focus:bg-white dark:focus:bg-slate-800 text-[var(--notion-text)] focus:ring-4 focus:ring-slate-900/5 focus:border-[var(--brand-primary)] outline-none transition-all font-medium"
-                    placeholder="Ex: Jean Dupont"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
+          ) : error && !inviteData ? (
+            <div className="text-center py-4">
+              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <span className="text-3xl">⚠️</span>
               </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[var(--notion-text)] mb-2">{t('auth.password')}</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--notion-text-light)]" />
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    className="w-full pl-12 pr-4 py-3 bg-[var(--notion-sidebar)] dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl focus:bg-white dark:focus:bg-slate-800 text-[var(--notion-text)] focus:ring-4 focus:ring-slate-900/5 focus:border-[var(--brand-primary)] outline-none transition-all font-medium"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[var(--notion-text)] mb-2">{t('auth.confirm_password')}</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--notion-text-light)]" />
-                  <input
-                    type="password"
-                    required
-                    className="w-full pl-12 pr-4 py-3 bg-[var(--notion-sidebar)] dark:bg-slate-900 border border-[var(--notion-border)] rounded-xl focus:bg-white dark:focus:bg-slate-800 text-[var(--notion-text)] focus:ring-4 focus:ring-slate-900/5 focus:border-[var(--brand-primary)] outline-none transition-all font-medium"
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-200 text-sm rounded-xl border border-red-100 dark:border-red-500/30 animate-shake">
-                  {error}
-                </div>
-              )}
-
+              <h2 className="text-xl font-bold text-[var(--notion-text)] mb-2">
+                {t('common.error') || 'Lien invalide'}
+              </h2>
+              <p className="text-sm text-[var(--notion-text-light)] mb-6">{error}</p>
               <button
-                type="submit"
-                disabled={submitting}
-                className="w-full py-4 bg-[var(--brand-primary)] text-white dark:text-slate-900 rounded-2xl font-bold hover:bg-slate-700 dark:hover:bg-slate-200 shadow-xl shadow-slate-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                onClick={() => navigate('/login')}
+                className="w-full py-2.5 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                style={{ boxShadow: 'var(--shadow-btn)' }}
               >
-                {submitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  t('auth.signup')
-                )}
+                {t('auth.back_to_login') || 'Retour à la connexion'} <ArrowRight className="w-4 h-4" />
               </button>
-            </form>
-          </>
-        )}
+            </div>
+          ) : (
+            <>
+              {/* Logo + heading */}
+              <div className="text-center mb-7">
+                <img src={logo} alt="Badgi-WorkFlow" className="h-12 w-auto mx-auto mb-4" />
+                <h1 className="text-xl font-bold text-[var(--notion-text)]">
+                  {t('auth.signup_title') || 'Finalisez votre inscription'}
+                </h1>
+                <p className="text-sm text-[var(--notion-text-light)] mt-1">
+                  {t('auth.signup_subtitle') || 'Configurez votre profil pour commencer'}
+                </p>
+              </div>
+
+              {/* Invited email banner */}
+              <div className="flex items-center gap-3 bg-[var(--surface-low)] border border-[var(--notion-border)] rounded-xl p-3 mb-6">
+                <div className="w-8 h-8 bg-[var(--brand-primary)]/10 rounded-lg flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4 text-[var(--brand-primary)]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--notion-text-light)]">
+                    {t('auth.invited_account') || 'Compte invité'}
+                  </p>
+                  <p className="text-sm text-[var(--notion-text)] font-medium truncate">{inviteData?.email}</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Field
+                  label={t('project.initiator')}
+                  icon={UserIcon}
+                  type="text"
+                  placeholder="Jean Dupont"
+                  value={formData.name}
+                  onChange={(v) => setFormData({ ...formData, name: v })}
+                  required
+                />
+                <Field
+                  label={t('auth.password')}
+                  icon={Lock}
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(v) => setFormData({ ...formData, password: v })}
+                  required
+                  minLength={6}
+                />
+                <Field
+                  label={t('auth.confirm_password')}
+                  icon={Lock}
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={(v) => setFormData({ ...formData, confirmPassword: v })}
+                  required
+                />
+
+                {error && (
+                  <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-100">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-2.5 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white rounded-xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+                  style={{ boxShadow: 'var(--shadow-btn)' }}
+                >
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>{t('auth.signup') || 'Créer mon compte'} <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Status badge */}
+      <div
+        className="fixed bottom-6 right-6 flex items-center gap-1.5 bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-full px-3 py-1.5 text-[10px] text-[var(--notion-text-light)]"
+        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        Cloud System Active
       </div>
     </div>
   );
