@@ -470,9 +470,9 @@ const statusPill = (status: string) => {
 };
 const priorityPill = (priority: string) => {
   switch (priority) {
-    case 'Haute':   return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
-    case 'Moyenne': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
-    default:        return 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
+    case 'Haute':   return 'bg-rose-100 text-rose-700';
+    case 'Moyenne': return 'bg-amber-100 text-amber-700';
+    default:        return 'bg-[var(--surface-low)] text-[var(--notion-text-light)]';
   }
 };
 
@@ -676,7 +676,7 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
         return (
           <div
             key={col}
-            className="min-w-[280px] flex-1 flex flex-col"
+            className="min-w-[300px] flex-1 flex flex-col"
             onDragOver={(e) => handleDragOver(e, col)}
             onDragLeave={(e) => {
               if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null);
@@ -686,8 +686,8 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
             {/* Column header */}
             <div className="flex items-center gap-2.5 mb-3 px-1">
               <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${colAccentClass(col)}`} />
-              <span className="text-sm font-semibold text-[var(--notion-text)]">{col}</span>
-              <span className="ml-auto text-xs font-semibold text-[var(--notion-text-light)] bg-[var(--notion-hover)] px-2 py-0.5 rounded-full">{pCol.length}</span>
+              <span className="text-sm font-bold text-[var(--notion-text)] tracking-tight">{col}</span>
+              <span className={`ml-auto text-[10px] font-black px-2 py-0.5 rounded-full ${pCol.length > 0 ? 'bg-[var(--surface-mid)] text-[var(--brand-secondary)]' : 'bg-[var(--surface-low)] text-[var(--notion-text-light)]'}`}>{pCol.length}</span>
             </div>
 
             {/* Drop zone */}
@@ -701,56 +701,74 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
                     draggable
                     onDragStart={(e) => handleDragStart(e, p._id)}
                     onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
-                    className={`rounded-xl p-3.5 transition-all duration-150 select-none border
+                    className={`rounded-xl p-4 transition-all duration-150 select-none border group
                       ${overdue
-                        ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800'
+                        ? 'bg-rose-50 border-rose-200'
                         : 'bg-[var(--notion-sidebar)] border-[var(--notion-border)]'}
-                      ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : 'cursor-grab active:cursor-grabbing active:scale-[0.98]'}`}
+                      ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : 'cursor-grab active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)]'}`}
                     style={!isDragging && !overdue ? { boxShadow: 'var(--shadow-card)' } : undefined}
                   >
-                    {/* Overdue banner */}
-                    {overdue && (
-                      <div className="flex items-center gap-1 mb-2 text-[10px] font-bold text-rose-600 dark:text-rose-400">
-                        <AlertCircle size={11} />
-                        En retard — {new Date(p.deadline).toLocaleDateString('fr-FR')}
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-[var(--notion-text)]">
-                      <FileIcon />
-                      <span className="truncate leading-snug">{p.name}</span>
-                    </div>
-
-                    {/* Deadline row */}
-                    {p.deadline && (
-                      <div className="text-[10px] text-[var(--notion-text-light)] mb-2.5 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--notion-border)] inline-block" />
-                        {new Date(p.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap gap-1.5 justify-between items-center">
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${priorityPill(p.priority)}`}>
-                          {p.priority}
+                    {/* Header row: priority + urgent/overdue badges */}
+                    <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${priorityPill(p.priority)}`}>
+                        {p.priority}
+                      </span>
+                      {p.urgent && (
+                        <span className="text-[9px] font-black uppercase tracking-widest text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full border border-rose-200">
+                          Urgent
                         </span>
-                        {p.product && (
-                          <span className="text-[10px] text-[var(--notion-text-light)] bg-[var(--notion-hover)] px-1.5 py-0.5 rounded-md font-medium">
-                            {p.product}
-                          </span>
-                        )}
-                        {p.urgent && (
-                          <span className="text-[10px] font-bold text-rose-600 bg-rose-100 dark:bg-rose-900/20 px-1.5 py-0.5 rounded-md border border-rose-200 dark:border-rose-800">
-                            Urgent
-                          </span>
-                        )}
-                      </div>
-                      {showAssignee && p.assignedTo && (
-                        <span className="bg-[var(--surface-high)] text-[var(--brand-secondary)] px-1.5 py-0.5 rounded-md text-[10px] font-semibold">
-                          {getUserName(p.assignedTo)}
+                      )}
+                      {overdue && (
+                        <span className="flex items-center gap-0.5 text-[9px] font-black text-rose-600 ml-auto">
+                          <AlertCircle size={9} />
+                          En retard
                         </span>
                       )}
                     </div>
+
+                    {/* Project name */}
+                    <h4 className="text-sm font-bold text-[var(--notion-text)] mb-2 leading-snug line-clamp-2">
+                      {p.name}
+                    </h4>
+
+                    {/* Deadline */}
+                    {p.deadline && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-[var(--notion-text-light)] mb-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--notion-border)] shrink-0" />
+                        {new Date(p.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </div>
+                    )}
+
+                    {/* Product + type chips */}
+                    {(p.product || p.type) && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {p.product && (
+                          <span className="text-[10px] text-[var(--brand-secondary)] bg-[var(--surface-high)] px-2 py-0.5 rounded-md font-semibold">
+                            {p.product}
+                          </span>
+                        )}
+                        {p.type && (
+                          <span className="text-[10px] text-[var(--notion-text-light)] bg-[var(--surface-low)] px-2 py-0.5 rounded-md font-medium">
+                            {p.type}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Footer: assignee avatar */}
+                    {showAssignee && p.assignedTo && (
+                      <div className="flex items-center justify-between pt-3 border-t border-[var(--notion-border)] mt-1">
+                        <span className="text-[10px] text-[var(--notion-text-light)] font-medium">Assigné à</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 rounded-full bg-[var(--surface-high)] text-[var(--brand-secondary)] flex items-center justify-center text-[9px] font-black uppercase shrink-0">
+                            {getUserName(p.assignedTo).charAt(0)}
+                          </div>
+                          <span className="text-[10px] text-[var(--notion-text)] font-semibold max-w-[90px] truncate">
+                            {getUserName(p.assignedTo)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
