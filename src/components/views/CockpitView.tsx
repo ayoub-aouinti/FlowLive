@@ -14,7 +14,7 @@ const AVAILABLE_PAGES = [
   { id: 'stats', label: 'Stats' },
 ];
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
 
 const inputClass =
   'w-full px-3 py-2.5 bg-[var(--surface-low)] border border-[var(--notion-border)] rounded-xl text-[var(--notion-text)] text-sm outline-none transition-all focus:ring-2 focus:ring-[var(--brand-primary)]/10 focus:border-[var(--brand-primary)] placeholder:text-[var(--notion-text-light)]/60';

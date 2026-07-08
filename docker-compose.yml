@@ -1,57 +1,63 @@
 version: '3.9'
 
 # ──────────────────────────────────────────────────────────────────────────────
-# WorkPlan / FlowLive — Docker Compose (self-contained: MongoDB inclus)
+# WorkPlan / FlowLive — Docker Compose (Single Container + MongoDB)
 #
 # Variables OBLIGATOIRES à configurer dans Coolify → Environment Variables :
 #   JWT_SECRET      → clé secrète JWT (ex: openssl rand -hex 32)
-#   FRONTEND_URL    → URL publique du frontend (ex: https://flow.barakode.org)
-#   VITE_API_URL    → URL publique du backend  (ex: https://api.barakode.org)
+#   FRONTEND_URL    → URL publique de l'app (ex: https://flow.barakode.org)
 #
-# Variables optionnelles (email) :
+# Variables optionnelles :
+#   VITE_API_URL    → laisser vide pour same-origin (recommandé sur Coolify)
 #   EMAIL_HOST / EMAIL_PORT / EMAIL_USER / EMAIL_PASS / EMAIL_FROM
 #
 # Démarrage local :
 #   docker-compose up --build
+#
+# Accès :
+#   App (frontend + backend) → http://localhost:5001
 # ──────────────────────────────────────────────────────────────────────────────
 
 services:
 
   # ── MongoDB ──────────────────────────────────────────────────────────────────
-  mongo:
+  mongodb:
     image: mongo:7
-    container_name: workflowlive-mongo
+    container_name: workflowlive-db
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: workflowlive
     volumes:
-      - mongo_data:/data/db
-    # Port non exposé à l'extérieur — accessible uniquement par le backend
+      - mongodb_data:/data/db
+    # Port non exposé à l'extérieur — accessible uniquement par l'app
 
-  # ── Backend (Node.js / Express / Socket.io) ──────────────────────────────────
-  backend:
+  # ── Application (Frontend Vite + Backend Express — port 5001) ────────────────
+  app:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile
-    image: workflowlive-backend
-    container_name: workflowlive-backend
+      args:
+        # Laisser vide pour same-origin (Coolify gère le routing via son proxy)
+        VITE_API_URL: ${VITE_API_URL:-}
+    image: workflowlive-app
+    container_name: workflowlive-app
     restart: unless-stopped
-    ports:
-      - "${BACKEND_PORT:-5001}:5001"
+    # Coolify expose via son reverse-proxy — décommenter pour accès IP direct :
+    # ports:
+    #   - "${PORT_HOST:-5001}:5001"
     environment:
       PORT: 5001
       NODE_ENV: production
-      # Par défaut = MongoDB interne ; surcharger avec une URI Atlas si besoin
-      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/workflowlive}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/workflowlive}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required — set it in Coolify env vars}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001}
       EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
       EMAIL_PORT: ${EMAIL_PORT:-465}
       EMAIL_USER: ${EMAIL_USER:-}
       EMAIL_PASS: ${EMAIL_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
     depends_on:
-      - mongo
+      - mongodb
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:5001/api/health"]
       interval: 30s
@@ -59,22 +65,6 @@ services:
       retries: 5
       start_period: 30s
 
-  # ── Frontend (Vite build → Nginx) ───────────────────────────────────────────
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:5001}
-    image: workflowlive-frontend
-    container_name: workflowlive-frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-80}:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-
 volumes:
-  mongo_data:
+  mongodb_data:
     driver: local

@@ -28,13 +28,28 @@ const allowedOrigins = [
   'http://localhost:5173'
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) callback(null, true);
-    else callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-}));
+const corsOptionsDelegate = (req, callback) => {
+  const origin = req.header('Origin');
+  const host = req.header('Host');
+  let isAllowed = false;
+
+  if (!origin) {
+    isAllowed = true;
+  } else {
+    const originHost = origin.replace(/^https?:\/\//, '');
+    if (
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.includes('*') ||
+      originHost === host
+    ) {
+      isAllowed = true;
+    }
+  }
+
+  callback(null, { origin: isAllowed, credentials: true });
+};
+
+app.use(cors(corsOptionsDelegate));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -620,17 +635,36 @@ const checkOverdueProjects = async () => {
   }
 };
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+
+// Serve static assets in production
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Wildcard routing to serve React app for frontend routes
+app.get('*all', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // ── START SERVER ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5001;
 
-mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 15000 })
-  .then(() => {
-    console.log('✅ Connected to MongoDB Atlas');
-    checkOverdueProjects();
-    setInterval(checkOverdueProjects, 60 * 60 * 1000);
-    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+const connectWithRetry = () => {
+  console.log('Connecting to MongoDB...');
+  mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 15000 })
+    .then(() => {
+      console.log('✅ Connected to MongoDB');
+      checkOverdueProjects();
+      setInterval(checkOverdueProjects, 60 * 60 * 1000);
+      server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    })
+    .catch(err => {
+      console.error('❌ MongoDB connection error:', err.message);
+      console.log('Retrying to connect to MongoDB in 5 seconds...');
+      setTimeout(connectWithRetry, 5000);
+    });
+};
+
+connectWithRetry();

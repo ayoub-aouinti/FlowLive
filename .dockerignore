@@ -7,4 +7,3 @@ dist/
 .git/
 .gitignore
 *.md
-server/
