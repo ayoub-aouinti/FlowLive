@@ -14,7 +14,8 @@ import {
   X,
   ChevronUp,
   ChevronDown as ChevronDownIcon,
-  Paperclip
+  Paperclip,
+  Star
 } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
@@ -191,10 +192,27 @@ const Dashboard: React.FC = () => {
     return userIdOrObj.name || '-';
   };
 
-  const isPageActive = (pageId: string) => {
-    if (!deptConfig || !deptConfig.activePages) return true;
-    return deptConfig.activePages.includes(pageId);
+  const ROLE_PAGES: Record<string, string[]> = {
+    'worker':          ['table', 'kanban', 'timeline', 'calendrier'],
+    'chef de produit': ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+    'chef de projet':  ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+    'superadmin':      ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
   };
+
+  const isPageActive = (pageId: string) => {
+    if (deptConfig?.activePages && !deptConfig.activePages.includes(pageId)) return false;
+    const rolePages = ROLE_PAGES[userRole];
+    if (rolePages && !rolePages.includes(pageId)) return false;
+    return true;
+  };
+
+  const rateProject = useCallback(async (projectId: string, rating: number) => {
+    try {
+      await axios.patch(`${API_URL}/api/projects/${projectId}/rating`, { rating }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) { console.error(err); }
+  }, [token]);
 
   return (
     <div className="space-y-1 transition-colors duration-300">
@@ -436,7 +454,7 @@ const Dashboard: React.FC = () => {
 
       <div className="min-h-[500px]">
         {view === 'table' && <TableView projects={displayedProjects} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} formFields={deptConfig?.formFields || undefined} theme={theme} t={t} />}
-        {view === 'kanban' && <KanbanView projects={displayedProjects} theme={theme} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} />}
+        {view === 'kanban' && <KanbanView projects={displayedProjects} theme={theme} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} onRateProject={rateProject} />}
         {view === 'timeline' && <TimelineView projects={displayedProjects} getUserName={getUserName} theme={theme} />}
         {view === 'calendrier' && <CalendarView projects={displayedProjects} />}
         {view === 'reporting' && <ReportingView projects={displayedProjects} />}
@@ -616,17 +634,20 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
   );
 };
 
-const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: {
+const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, onRateProject }: {
   projects: Project[],
   theme: string,
   getUserName: (u: string | User | undefined) => string,
   userRole: string,
-  onUpdateStatus: (id: string, status: string) => void
+  onUpdateStatus: (id: string, status: string) => void,
+  onRateProject: (projectId: string, rating: number) => void,
 }) => {
   const columns = ['Nouveau', 'En cours', 'En révision', 'Terminé'];
   const showAssignee = userRole === 'chef de produit' || userRole === 'chef de projet';
+  const canRate = userRole === 'chef de produit' || userRole === 'chef de projet' || userRole === 'superadmin';
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [starHover, setStarHover] = useState<{ id: string; star: number } | null>(null);
 
   const isOverdue = (p: Project) => {
     if (p.status === 'Terminé') return false;
@@ -766,6 +787,37 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus }: 
                           <span className="text-[10px] text-[var(--notion-text)] font-semibold max-w-[90px] truncate">
                             {getUserName(p.assignedTo)}
                           </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Star rating — Terminé column only */}
+                    {col === 'Terminé' && (
+                      <div className="flex items-center gap-0.5 pt-2 mt-2 border-t border-[var(--notion-border)]">
+                        <span className="text-[9px] text-[var(--notion-text-light)] mr-1 font-medium">Appréciation</span>
+                        <div className="flex items-center gap-0.5 ml-auto">
+                          {[1, 2, 3, 4, 5].map(star => {
+                            const active = starHover?.id === p._id
+                              ? star <= starHover.star
+                              : star <= (p.rating || 0);
+                            return (
+                              <button
+                                key={star}
+                                type="button"
+                                disabled={!canRate}
+                                onMouseEnter={() => canRate && setStarHover({ id: p._id, star })}
+                                onMouseLeave={() => setStarHover(null)}
+                                onClick={e => { e.stopPropagation(); if (canRate) onRateProject(p._id, star); }}
+                                className={`transition-transform ${canRate ? 'cursor-pointer hover:scale-125' : 'cursor-default'} ${active ? 'text-amber-400' : 'text-[var(--notion-border)]'}`}
+                                title={canRate ? `Donner ${star}/5` : `${p.rating || 0}/5`}
+                              >
+                                <Star size={13} fill={active ? 'currentColor' : 'none'} />
+                              </button>
+                            );
+                          })}
+                          {p.rating && (
+                            <span className="text-[9px] text-amber-600 font-bold ml-1">{p.rating}/5</span>
+                          )}
                         </div>
                       </div>
                     )}

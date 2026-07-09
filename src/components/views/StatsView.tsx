@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Project } from '../../types';
-import { BarChart2, CheckCircle2, Clock, AlertTriangle, Layers, TrendingUp } from 'lucide-react';
+import { BarChart2, CheckCircle2, Clock, AlertTriangle, Layers, TrendingUp, Star } from 'lucide-react';
 
 interface StatsViewProps {
   projects: Project[];
@@ -50,6 +50,17 @@ const StatsView: React.FC<StatsViewProps> = ({ projects }) => {
     'bg-purple-500 text-white',
     'bg-rose-500 text-white',
   ];
+
+  // ── Retour qualité (ratings) ────────────────────────────────────────────────
+  const ratedProjects = projects.filter(p => p.status === 'Terminé' && p.rating != null);
+  const avgRating = ratedProjects.length > 0
+    ? ratedProjects.reduce((s, p) => s + (p.rating || 0), 0) / ratedProjects.length
+    : 0;
+  const ratingDist = [5, 4, 3, 2, 1].map(star => ({
+    star,
+    count: ratedProjects.filter(p => p.rating === star).length,
+  }));
+  const unratedCompleted = projects.filter(p => p.status === 'Terminé' && !p.rating).length;
 
   return (
     <div className="p-6 max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto scrollbar-thin">
@@ -215,6 +226,71 @@ const StatsView: React.FC<StatsViewProps> = ({ projects }) => {
           </div>
         </div>
       </div>
+
+      {/* Retour qualité */}
+      {completed > 0 && (
+        <div className="p-6 bg-[var(--notion-sidebar)] border border-[var(--notion-border)] rounded-xl mb-4" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="flex items-center gap-2 mb-5">
+            <Star size={14} className="text-amber-400" fill="currentColor" />
+            <h3 className="text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-widest">Retour qualité — Appréciation des tâches terminées</h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* Average rating gauge */}
+            <div className="flex flex-col items-center justify-center text-center p-4 bg-[var(--surface-low)] rounded-xl border border-[var(--notion-border)]">
+              <div className="flex items-center gap-1 mb-2">
+                {[1, 2, 3, 4, 5].map(s => (
+                  <Star
+                    key={s}
+                    size={20}
+                    className={s <= Math.round(avgRating) ? 'text-amber-400' : 'text-[var(--notion-border)]'}
+                    fill={s <= Math.round(avgRating) ? 'currentColor' : 'none'}
+                  />
+                ))}
+              </div>
+              <div className="text-3xl font-black text-[var(--notion-text)] leading-none mb-1">
+                {ratedProjects.length > 0 ? avgRating.toFixed(1) : '—'}
+              </div>
+              <div className="text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-widest mb-3">Note moyenne</div>
+              <div className="flex gap-3 text-[10px]">
+                <span className="text-emerald-600 font-bold">{ratedProjects.length} noté{ratedProjects.length > 1 ? 's' : ''}</span>
+                {unratedCompleted > 0 && (
+                  <span className="text-[var(--notion-text-light)]">{unratedCompleted} sans note</span>
+                )}
+              </div>
+            </div>
+
+            {/* Distribution bars */}
+            <div className="lg:col-span-2 space-y-2.5">
+              {ratingDist.map(({ star, count }) => {
+                const pct = ratedProjects.length > 0 ? Math.round((count / ratedProjects.length) * 100) : 0;
+                return (
+                  <div key={star} className="flex items-center gap-3">
+                    <div className="flex items-center gap-0.5 w-20 shrink-0">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} size={10} className={s <= star ? 'text-amber-400' : 'text-[var(--notion-border)]'} fill={s <= star ? 'currentColor' : 'none'} />
+                      ))}
+                    </div>
+                    <div className="flex-1 bg-[var(--surface-low)] h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-400 rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-[var(--notion-text-light)] w-10 text-right">{count} ({pct}%)</span>
+                  </div>
+                );
+              })}
+              {ratedProjects.length === 0 && (
+                <p className="text-sm text-[var(--notion-text-light)] text-center py-4">
+                  Aucune appréciation donnée — les chefs de produit peuvent noter les tâches terminées depuis la vue Pipeline.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Type breakdown */}
       {types.length > 0 && (

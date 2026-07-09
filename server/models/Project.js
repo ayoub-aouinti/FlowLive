@@ -16,6 +16,7 @@ const projectSchema = new mongoose.Schema({
   departmentId: String,
   overdueNotifiedDate: String,
   estimatedHours: Number,
+  rating: { type: Number, default: null },
   _customFields: { type: mongoose.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now }
 }, { versionKey: false, strict: false });

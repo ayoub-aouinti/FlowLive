@@ -53,6 +53,7 @@ export interface Project {
   createdAt: string;
   departmentId?: string;
   estimatedHours?: number;
+  rating?: number | null;
   _customFields?: Record<string, unknown>;
 }
 

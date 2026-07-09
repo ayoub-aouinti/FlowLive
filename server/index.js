@@ -476,6 +476,26 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
   }
 });
 
+// ── PROJECTS — rating ────────────────────────────────────────────────────────
+app.patch('/api/projects/:id/rating', authenticateToken, async (req, res) => {
+  try {
+    const { rating } = req.body;
+    if (!rating || rating < 1 || rating > 5) return res.status(400).json({ message: 'Note invalide (1–5)' });
+    const canRate = ['chef de produit', 'chef de projet', 'superadmin'].includes(req.user.role);
+    if (!canRate) return res.status(403).json({ message: 'Access denied' });
+    const project = await Project.findOneAndUpdate(
+      { _id: req.params.id, departmentId: req.user.departmentId, status: 'Terminé' },
+      { rating },
+      { new: true }
+    ).lean();
+    if (!project) return res.status(404).json({ message: 'Not found or not completed' });
+    io.emit('project_updated', project);
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── LEAVES (congés) ───────────────────────────────────────────────────────────
 app.get('/api/leaves', authenticateToken, async (req, res) => {
   try {
