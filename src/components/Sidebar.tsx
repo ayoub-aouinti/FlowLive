@@ -52,7 +52,22 @@ const Sidebar: React.FC = () => {
     workspaceTitle?: string | null;
     workspaceSubtitle?: string | null;
     logoUrl?: string | null;
+    rolePages?: Record<string, string[]>;
   } | null>(null);
+
+  const DEFAULT_ROLE_PAGES: Record<string, string[]> = {
+    'worker':          ['table', 'kanban', 'timeline', 'calendrier'],
+    'chef de produit': ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+  };
+
+  const isSidebarPageVisible = (pageId: string): boolean => {
+    if (user?.role === 'superadmin' || user?.role === 'chef de projet') return true;
+    if (deptConfig?.activePages && !deptConfig.activePages.includes(pageId)) return false;
+    const role = user?.role ?? '';
+    const allowed = deptConfig?.rolePages?.[role] ?? DEFAULT_ROLE_PAGES[role];
+    if (allowed && !allowed.includes(pageId)) return false;
+    return true;
+  };
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showLangMenu, setShowLangMenu] = useState(false);
 
@@ -219,10 +234,7 @@ const Sidebar: React.FC = () => {
               ))
             ) : (
               mainPages
-                .filter(item => {
-                  if (!deptConfig || !deptConfig.activePages) return true;
-                  return deptConfig.activePages.includes(item.id);
-                })
+                .filter(item => isSidebarPageVisible(item.id))
                 .map((item) => (
                   <button
                     key={item.id}
