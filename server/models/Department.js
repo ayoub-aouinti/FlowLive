@@ -19,7 +19,8 @@ const deptSchema = new mongoose.Schema({
   coverUrl: { type: String, default: null },
   logoUrl: { type: String, default: null },
   workspaceTitle: { type: String, default: null },
-  workspaceSubtitle: { type: String, default: null }
+  workspaceSubtitle: { type: String, default: null },
+  rolePages: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { versionKey: false });
 
 module.exports = mongoose.model('Department', deptSchema);

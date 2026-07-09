@@ -203,7 +203,8 @@ app.get('/api/departments/my-config', authenticateToken, async (req, res) => {
       coverUrl: dept.coverUrl || null,
       logoUrl: dept.logoUrl || null,
       workspaceTitle: dept.workspaceTitle || null,
-      workspaceSubtitle: dept.workspaceSubtitle || null
+      workspaceSubtitle: dept.workspaceSubtitle || null,
+      rolePages: dept.rolePages || {}
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -313,6 +314,7 @@ app.put('/api/departments/:id/config', authenticateToken, async (req, res) => {
     if (req.body.logoUrl !== undefined) patch.logoUrl = req.body.logoUrl;
     if (req.body.workspaceTitle !== undefined) patch.workspaceTitle = req.body.workspaceTitle;
     if (req.body.workspaceSubtitle !== undefined) patch.workspaceSubtitle = req.body.workspaceSubtitle;
+    if (req.body.rolePages !== undefined) patch.rolePages = req.body.rolePages;
 
     const updated = await Department.findByIdAndUpdate(req.params.id, { $set: patch }, { new: true }).lean();
     res.json(withId(updated));

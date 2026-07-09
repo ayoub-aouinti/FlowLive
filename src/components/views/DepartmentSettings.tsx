@@ -22,6 +22,26 @@ const FIELD_TYPE_OPTIONS: { value: FormField['type']; label: string }[] = [
   { value: 'attachment', label: 'Pièce jointe (fichier)' },
 ];
 
+const ALL_PAGES = [
+  { id: 'table',      label: 'Table' },
+  { id: 'kanban',     label: 'Pipeline' },
+  { id: 'timeline',   label: 'Planning' },
+  { id: 'calendrier', label: 'Calendrier' },
+  { id: 'reporting',  label: 'Reporting' },
+  { id: 'urgences',   label: 'Urgences' },
+  { id: 'stats',      label: 'Stats' },
+];
+
+const CONFIGURABLE_ROLES = [
+  { id: 'worker',          label: 'Worker' },
+  { id: 'chef de produit', label: 'Chef de produit' },
+];
+
+const DEFAULT_ROLE_PAGES: Record<string, string[]> = {
+  'worker':          ['table', 'kanban', 'timeline', 'calendrier'],
+  'chef de produit': ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+};
+
 const DEFAULT_FORM_FIELDS: FormField[] = [
   { id: 'f_initiator', label: 'Initiateur', type: 'text', required: true },
   { id: 'f_assignedTo', label: 'Affectation', type: 'user', required: true },
@@ -44,7 +64,8 @@ export function DepartmentSettings() {
     departmentName?: string;
     workspaceTitle?: string;
     workspaceSubtitle?: string;
-  }>({ products: [], types: [], activePages: [], pageConfigs: {}, formFields: [] });
+    rolePages?: Record<string, string[]>;
+  }>({ products: [], types: [], activePages: [], pageConfigs: {}, formFields: [], rolePages: {} });
   const [departmentMembers, setDepartmentMembers] = useState<(User & { status: string; isInvitation?: boolean })[]>([]);
   const [newItem, setNewItem] = useState({ type: 'product', value: '' });
   const [bulkEmails, setBulkEmails] = useState('');
@@ -109,6 +130,16 @@ export function DepartmentSettings() {
     if (type === 'product') newConfig.products = newConfig.products.filter(p => p !== value);
     else newConfig.types = newConfig.types.filter(t => t !== value);
     handleUpdateConfig(newConfig);
+  };
+
+  const handleToggleRolePage = (role: string, pageId: string) => {
+    const active = config.activePages || [];
+    const current = config.rolePages?.[role] ?? DEFAULT_ROLE_PAGES[role] ?? active;
+    const next = current.includes(pageId)
+      ? current.filter(p => p !== pageId)
+      : [...current, pageId];
+    const newRolePages = { ...(config.rolePages || {}), [role]: next };
+    handleUpdateConfig({ ...config, rolePages: newRolePages });
   };
 
   const handleSaveEdit = () => {
@@ -339,6 +370,57 @@ export function DepartmentSettings() {
               <span className="text-sm text-[var(--notion-text-light)] italic">Aucune page attribuée à votre département.</span>
             )}
           </div>
+
+          {/* ── Visibilité par rôle ── */}
+          {config.activePages && config.activePages.length > 0 && (
+            <div className="pt-5 border-t border-[var(--notion-border)]">
+              <h4 className="font-bold text-sm text-[var(--notion-text)] mb-1 uppercase tracking-widest opacity-80">Visibilité des pages par rôle</h4>
+              <p className="text-xs text-[var(--notion-text-light)] mb-4">Définissez quelles pages sont visibles pour chaque rôle. Le chef de projet voit toujours toutes les pages autorisées.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--notion-border)]">
+                      <th className="py-2 pr-4 font-bold text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest w-40">Rôle</th>
+                      {ALL_PAGES.filter(p => config.activePages!.includes(p.id)).map(p => (
+                        <th key={p.id} className="py-2 px-3 text-center font-bold text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest">{p.label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--notion-border)]">
+                    {CONFIGURABLE_ROLES.map(role => {
+                      const effective = config.rolePages?.[role.id] ?? DEFAULT_ROLE_PAGES[role.id] ?? config.activePages ?? [];
+                      return (
+                        <tr key={role.id} className="hover:bg-[var(--notion-hover)] transition-colors">
+                          <td className="py-3 pr-4 font-bold text-[var(--notion-text)] text-xs">{role.label}</td>
+                          {ALL_PAGES.filter(p => config.activePages!.includes(p.id)).map(p => (
+                            <td key={p.id} className="py-3 px-3 text-center">
+                              <label className="inline-flex items-center justify-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={effective.includes(p.id)}
+                                  onChange={() => handleToggleRolePage(role.id, p.id)}
+                                  className="w-4 h-4 rounded border-[var(--notion-border)] text-[var(--brand-accent)] cursor-pointer focus:ring-0"
+                                />
+                              </label>
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                    {/* Chef de projet — read-only, always all */}
+                    <tr className="opacity-50">
+                      <td className="py-3 pr-4 font-bold text-[var(--notion-text)] text-xs">Chef de projet</td>
+                      {ALL_PAGES.filter(p => config.activePages!.includes(p.id)).map(p => (
+                        <td key={p.id} className="py-3 px-3 text-center">
+                          <span className="text-emerald-500 font-black text-base leading-none select-none" title="Toujours activé">✓</span>
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {config.activePages?.includes('table') && (
             <div className="pt-5 border-t border-[var(--notion-border)]">

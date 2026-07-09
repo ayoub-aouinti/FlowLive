@@ -83,6 +83,7 @@ const Dashboard: React.FC = () => {
     logoUrl?: string | null;
     workspaceTitle?: string | null;
     workspaceSubtitle?: string | null;
+    rolePages?: Record<string, string[]>;
   } | null>(null);
   const { token } = useAuth();
 
@@ -192,17 +193,17 @@ const Dashboard: React.FC = () => {
     return userIdOrObj.name || '-';
   };
 
-  const ROLE_PAGES: Record<string, string[]> = {
+  const DEFAULT_ROLE_PAGES: Record<string, string[]> = {
     'worker':          ['table', 'kanban', 'timeline', 'calendrier'],
     'chef de produit': ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
-    'chef de projet':  ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
-    'superadmin':      ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
   };
 
   const isPageActive = (pageId: string) => {
+    if (userRole === 'superadmin') return true;
     if (deptConfig?.activePages && !deptConfig.activePages.includes(pageId)) return false;
-    const rolePages = ROLE_PAGES[userRole];
-    if (rolePages && !rolePages.includes(pageId)) return false;
+    if (userRole === 'chef de projet') return true;
+    const allowed = deptConfig?.rolePages?.[userRole] ?? DEFAULT_ROLE_PAGES[userRole];
+    if (allowed && !allowed.includes(pageId)) return false;
     return true;
   };
 
