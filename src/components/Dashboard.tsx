@@ -459,7 +459,7 @@ const Dashboard: React.FC = () => {
         {view === 'calendrier' && <CalendarView projects={displayedProjects} />}
         {view === 'reporting' && <ReportingView projects={displayedProjects} />}
         {view === 'urgences' && <ReportingView projects={displayedProjects.filter(p => p.urgent)} />}
-        {view === 'stats' && <StatsView projects={displayedProjects} />}
+        {view === 'stats' && <StatsView projects={displayedProjects} users={users} />}
         {view === 'demarrer' && (
           <div className="bg-[var(--notion-sidebar)] rounded-2xl border border-[var(--notion-border)] shadow-[var(--shadow-card)] animate-in slide-in-from-bottom-4 duration-500">
              <ProjectForm />
