@@ -1,8 +1,11 @@
 /**
- * Migration script: JSON flat files → MongoDB Atlas
- * Run once: node server/seed.js
+ * Seed MongoDB Atlas with local JSON data.
+ * Usage:
+ *   node seed.js                            (uses MONGODB_URI from server/.env)
+ *   MONGODB_URI="mongodb+srv://..." node seed.js
  */
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -40,9 +43,11 @@ async function seed() {
   const users = read('users.json');
   for (const u of users) {
     const uid = u._id || u.id;
+    const isBcrypt = u.password && (u.password.startsWith('$2b$') || u.password.startsWith('$2a$'));
+    const password = isBcrypt ? u.password : await bcrypt.hash(u.password || 'changeme', 10);
     await User.updateOne(
       { _id: uid },
-      { $set: { _id: uid, ...u } },
+      { $set: { _id: uid, ...u, password } },
       { upsert: true }
     );
   }
