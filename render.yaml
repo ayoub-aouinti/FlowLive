@@ -1,24 +1,24 @@
 services:
   - type: web
-    name: flowlive
+    name: flowlive-api
     runtime: node
     region: frankfurt
     plan: free
-    rootDir: .
-    buildCommand: npm ci && npm run build && mkdir -p server/public && cp -r dist/. server/public/ && npm ci --prefix server
-    startCommand: node server/index.js
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: node index.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
+      - key: USE_LOCAL_DB
+        value: false
       - key: MONGODB_URI
-        sync: false        # set manually in Render dashboard
+        sync: false        # set in Render dashboard
       - key: JWT_SECRET
-        sync: false        # set manually in Render dashboard
+        sync: false        # set in Render dashboard
       - key: FRONTEND_URL
-        sync: false        # set to your Render URL e.g. https://flowlive-5a7s.onrender.com
+        sync: false        # set to your Vercel URL e.g. https://flowlive.vercel.app
       - key: EMAIL_HOST
         sync: false
       - key: EMAIL_PORT

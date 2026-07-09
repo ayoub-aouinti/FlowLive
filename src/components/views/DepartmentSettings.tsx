@@ -4,6 +4,8 @@ import { Plus, Users, LayoutList, Trash2, Building2, FileText, GripVertical, Che
 import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types';
 
+const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
+
 interface FormField {
   id: string;
   label: string;
@@ -83,8 +85,8 @@ export function DepartmentSettings() {
     try {
       const auth = { headers: { Authorization: `Bearer ${token}` } };
       const [configRes, membersRes] = await Promise.all([
-        axios.get('http://localhost:5001/api/departments/my-config', auth),
-        axios.get('http://localhost:5001/api/departments/members-status', auth)
+        axios.get(`${API_URL}/api/departments/my-config`, auth),
+        axios.get(`${API_URL}/api/departments/members-status`, auth)
       ]);
       setConfig(configRes.data);
       setDepartmentMembers(membersRes.data);
@@ -107,7 +109,7 @@ export function DepartmentSettings() {
         return;
       }
       setConfig(newConfig);
-      await axios.put(`http://localhost:5001/api/departments/${deptId}/config`, newConfig, {
+      await axios.put(`${API_URL}/api/departments/${deptId}/config`, newConfig, {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (err) {
@@ -164,7 +166,7 @@ export function DepartmentSettings() {
 
     setIsInviting(true);
     try {
-      const res = await axios.post('http://localhost:5001/api/users/invite-bulk', { emails, role: inviteRole }, {
+      const res = await axios.post(`${API_URL}/api/users/invite-bulk`, { emails, role: inviteRole }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBulkEmails('');
@@ -208,7 +210,7 @@ export function DepartmentSettings() {
         try {
           const deptId = config.departmentId || user?.departmentId;
           const payload = type === 'products' ? { products: items } : { types: items };
-          const res = await axios.post(`http://localhost:5001/api/departments/${deptId}/import-resources`, payload, {
+          const res = await axios.post(`${API_URL}/api/departments/${deptId}/import-resources`, payload, {
             headers: { Authorization: `Bearer ${token}` }
           });
           setConfig(res.data);
@@ -224,7 +226,7 @@ export function DepartmentSettings() {
 
   const handleUpdateMemberRole = async (memberId: string, newRole: string) => {
     try {
-      await axios.put(`http://localhost:5001/api/users/${memberId}`, { role: newRole }, {
+      await axios.put(`${API_URL}/api/users/${memberId}`, { role: newRole }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
@@ -236,7 +238,7 @@ export function DepartmentSettings() {
   const handleDeleteMember = async (memberId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce membre/invitation ?')) return;
     try {
-      await axios.delete(`http://localhost:5001/api/users/${memberId}`, {
+      await axios.delete(`${API_URL}/api/users/${memberId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
