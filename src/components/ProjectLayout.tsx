@@ -79,9 +79,9 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
   return (
     <div className={`flex min-h-screen bg-[var(--notion-bg)] transition-colors duration-300 ${isRtl ? 'flex-row-reverse' : ''}`}>
       <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 md:ml-0">
         {/* Cover Image Area */}
-        <div className="h-44 w-full relative group bg-[var(--surface-low)]">
+        <div className="h-32 md:h-44 w-full relative group bg-[var(--surface-low)]">
           {config?.coverUrl ? (
             <img src={config.coverUrl} className="w-full h-full object-cover" alt="Cover" />
           ) : (
@@ -91,7 +91,7 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           
           {canEdit && (
-            <div className={`absolute bottom-4 ${isRtl ? 'left-8' : 'right-8'} flex gap-2`}>
+            <div className={`absolute bottom-2 md:bottom-4 ${isRtl ? 'left-4 md:left-8' : 'right-4 md:right-8'} flex gap-2`}>
               <input 
                 type="file" 
                 ref={coverInputRef} 
@@ -112,11 +112,11 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
         </div>
 
         {/* Content Area */}
-        <div className="max-w-7xl mx-auto w-full px-12 pb-20 relative">
+        <div className="max-w-7xl mx-auto w-full px-4 md:px-12 pb-20 relative">
           {/* Logo Area */}
-          <div className={`absolute -top-16 ${isRtl ? 'right-12' : 'left-12'} group/logo`}>
+          <div className={`absolute -top-10 md:-top-16 ${isRtl ? 'right-4 md:right-12' : 'left-4 md:left-12'} group/logo`}>
             <div className="relative">
-              <div className="w-32 h-32 rounded-3xl bg-white dark:bg-slate-800 p-2 shadow-xl border-4 border-white dark:border-slate-800 overflow-hidden flex items-center justify-center text-8xl transition-transform group-hover/logo:scale-[1.02]">
+              <div className="w-20 h-20 md:w-32 md:h-32 rounded-2xl md:rounded-3xl bg-white dark:bg-slate-800 p-1.5 md:p-2 shadow-xl border-2 md:border-4 border-white dark:border-slate-800 overflow-hidden flex items-center justify-center transition-transform group-hover/logo:scale-[1.02]">
                 {config?.logoUrl ? (
                   <img src={config.logoUrl} className="w-full h-full object-contain rounded-xl" alt="Logo" />
                 ) : (
@@ -145,7 +145,7 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          <div className="pt-24">
+          <div className="pt-14 md:pt-24">
             {children}
           </div>
         </div>

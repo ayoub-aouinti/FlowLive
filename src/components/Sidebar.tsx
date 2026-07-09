@@ -17,6 +17,8 @@ import {
   Moon,
   Languages,
   ChevronDown,
+  Menu,
+  X,
 } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
@@ -70,6 +72,7 @@ const Sidebar: React.FC = () => {
   };
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -144,10 +147,47 @@ const Sidebar: React.FC = () => {
 
   return (
     <>
-      <aside className="w-64 flex flex-col h-screen sticky top-0 select-none bg-[var(--notion-sidebar)] border-r border-[var(--notion-border)]" style={{ transition: 'background-color 0.25s ease' }}>
+      {/* Mobile hamburger button — only when sidebar is closed */}
+      {!mobileOpen && (
+        <button
+          className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-(--notion-sidebar) border border-(--notion-border) text-(--notion-text) shadow-md"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 z-40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`
+          w-64 flex flex-col h-screen select-none
+          bg-[var(--notion-sidebar)] border-r border-[var(--notion-border)]
+          fixed top-0 left-0 z-50 transition-transform duration-300
+          md:sticky md:translate-x-0
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+        style={{ transition: 'transform 0.3s ease, background-color 0.25s ease' }}
+      >
+
+        {/* ── Mobile close button ── */}
+        <button
+          className="md:hidden absolute top-3 right-3 p-1.5 rounded-lg text-(--notion-text-light) hover:bg-(--notion-hover) transition-colors"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
 
         {/* ── Workspace header ── */}
-        <div className="px-4 pt-4 pb-3 border-b border-[var(--notion-border)]">
+        <div className="px-4 pt-4 pb-3 border-b border-(--notion-border)">
           <div className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-[var(--notion-hover)] cursor-pointer transition-colors group">
             <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-[var(--surface-low)] flex items-center justify-center">
               <img src={workspaceLogo} alt="Logo" className="w-full h-full object-contain p-0.5" />

@@ -218,9 +218,9 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-1 transition-colors duration-300">
       {/* Page header */}
-      <div className="flex items-center gap-4 mb-6 pt-5">
+      <div className="flex items-center gap-4 mb-4 md:mb-6 pt-3 md:pt-5">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--notion-text)] leading-tight tracking-tight">
+          <h1 className="text-xl md:text-3xl font-bold text-[var(--notion-text)] leading-tight tracking-tight">
             {deptConfig?.workspaceTitle || deptConfig?.departmentName || 'Badgi-WorkFlow'}
           </h1>
           <p className="text-[var(--notion-text-light)] text-sm mt-1">
@@ -516,7 +516,7 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
   }
 
   return (
-    <div className="overflow-x-auto -mx-12 px-12">
+    <div className="overflow-x-auto -mx-4 px-4 md:-mx-12 md:px-12">
       <div
         className="min-w-[900px] bg-[var(--notion-sidebar)] rounded-xl border border-[var(--notion-border)] overflow-hidden"
         style={{ boxShadow: 'var(--shadow-card)' }}
@@ -688,7 +688,7 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-8 -mx-12 px-12 scrollbar-hide">
+    <div className="flex gap-4 overflow-x-auto pb-8 -mx-4 px-4 md:-mx-12 md:px-12 scrollbar-hide">
       {columns.map(col => {
         const pCol = projects.filter(p => (p.status || 'Nouveau') === col);
         const isOver = dragOverCol === col && draggedId !== null;
@@ -859,7 +859,7 @@ const TimelineView = ({ projects, getUserName, theme }: { projects: Project[], g
 
   return (
     <div
-      className="rounded-xl border border-[var(--notion-border)] overflow-hidden -mx-12 bg-[var(--notion-sidebar)]"
+      className="rounded-xl border border-[var(--notion-border)] overflow-hidden -mx-4 md:-mx-12 bg-[var(--notion-sidebar)]"
       style={{ boxShadow: 'var(--shadow-card)' }}
     >
       {/* Header */}
