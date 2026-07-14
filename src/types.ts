@@ -45,7 +45,7 @@ export interface Project {
   description: string;
   type: string;
   product: string;
-  status: 'Nouveau' | 'En cours' | 'En révision' | 'Terminé';
+  status: 'Nouveau' | 'En cours' | 'Livrée' | 'Retour' | 'Terminé';
   priority: 'Basse' | 'Moyenne' | 'Haute';
   urgent: boolean;
   deadline: string;
@@ -54,6 +54,7 @@ export interface Project {
   departmentId?: string;
   estimatedHours?: number;
   rating?: number | null;
+  workerStatusChanged?: boolean;
   _customFields?: Record<string, unknown>;
 }
 

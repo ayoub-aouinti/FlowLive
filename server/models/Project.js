@@ -17,6 +17,7 @@ const projectSchema = new mongoose.Schema({
   overdueNotifiedDate: String,
   estimatedHours: Number,
   rating: { type: Number, default: null },
+  workerStatusChanged: { type: Boolean, default: false },
   _customFields: { type: mongoose.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now }
 }, { versionKey: false, strict: false });

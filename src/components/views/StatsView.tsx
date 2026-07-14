@@ -37,12 +37,13 @@ const StatsView: React.FC<StatsViewProps> = ({ projects, users }) => {
   const total      = filteredProjects.length;
   const completed  = filteredProjects.filter(p => p.status === 'Terminé').length;
   const inProgress = filteredProjects.filter(p => p.status === 'En cours').length;
-  const inReview   = filteredProjects.filter(p => p.status === 'En révision').length;
+  const delivered  = filteredProjects.filter(p => p.status === 'Livrée').length;
+  const inReview   = filteredProjects.filter(p => p.status === 'Retour').length;
   const urgent     = filteredProjects.filter(p => p.urgent).length;
   const nouveau    = filteredProjects.filter(p => p.status === 'Nouveau').length;
 
   const completionRate = Math.round((completed / total) * 100 || 0);
-  const activeRate     = Math.round(((inProgress + inReview) / total) * 100 || 0);
+  const activeRate     = Math.round(((inProgress + delivered + inReview) / total) * 100 || 0);
 
   const typeCounts = filteredProjects.reduce((acc, p) => {
     if (p.type) acc[p.type] = (acc[p.type] || 0) + 1;
@@ -51,10 +52,11 @@ const StatsView: React.FC<StatsViewProps> = ({ projects, users }) => {
   const types = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
 
   const statusBreakdown = [
-    { label: 'Terminé',     count: completed,  color: 'bg-emerald-500', textColor: 'text-emerald-700', bg: 'bg-emerald-50' },
-    { label: 'En cours',    count: inProgress, color: 'bg-[var(--brand-secondary)]', textColor: 'text-[var(--brand-secondary)]', bg: 'bg-[var(--surface-high)]' },
-    { label: 'En révision', count: inReview,   color: 'bg-amber-400',  textColor: 'text-amber-700',   bg: 'bg-amber-50' },
-    { label: 'Nouveau',     count: nouveau,    color: 'bg-[var(--notion-text-light)]', textColor: 'text-[var(--notion-text-light)]', bg: 'bg-[var(--surface-low)]' },
+    { label: 'Terminé',  count: completed,  color: 'bg-emerald-500', textColor: 'text-emerald-700', bg: 'bg-emerald-50' },
+    { label: 'En cours', count: inProgress, color: 'bg-[var(--brand-secondary)]', textColor: 'text-[var(--brand-secondary)]', bg: 'bg-[var(--surface-high)]' },
+    { label: 'Livrée',   count: delivered,  color: 'bg-purple-500',  textColor: 'text-purple-700',   bg: 'bg-purple-50' },
+    { label: 'Retour',   count: inReview,   color: 'bg-amber-400',  textColor: 'text-amber-700',   bg: 'bg-amber-50' },
+    { label: 'Nouveau',  count: nouveau,    color: 'bg-[var(--notion-text-light)]', textColor: 'text-[var(--notion-text-light)]', bg: 'bg-[var(--surface-low)]' },
   ];
 
   const highPriority = filteredProjects.filter(p => p.priority === 'Haute').length;

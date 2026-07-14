@@ -259,7 +259,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[var(--notion-sidebar)] rounded-xl border border-[var(--notion-border)] select-none animate-in fade-in duration-300 overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+    <div className="flex flex-col h-[calc(100vh-260px)] bg-[var(--notion-sidebar)] rounded-xl border border-[var(--notion-border)] select-none animate-in fade-in duration-300 overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
 
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--notion-border)] bg-[var(--surface-low)]">

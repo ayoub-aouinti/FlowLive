@@ -28,6 +28,7 @@ const logo = '/logo.png';
 import CalendarView from './views/CalendarView';
 import ReportingView from './views/ReportingView';
 import StatsView from './views/StatsView';
+import TopScrollbar from './TopScrollbar';
 
 const getPriorityColor = (priority: string, theme: string) => {
   if (theme === 'dark') {
@@ -50,14 +51,16 @@ const getStatusColor = (status: string, theme: string) => {
     switch (status) {
       case 'Terminé': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
       case 'En cours': return 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
-      case 'En révision': return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
+      case 'Livrée': return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+      case 'Retour': return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
       default: return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
     }
   }
   switch (status) {
     case 'Terminé': return 'bg-[#dbeddb] text-[#1c3829]';
     case 'En cours': return 'bg-[#d3e5ef] text-[#183347]';
-    case 'En révision': return 'bg-[#f5e0e9] text-[#432936]';
+    case 'Livrée': return 'bg-[#eae1f5] text-[#3c2a4d]';
+    case 'Retour': return 'bg-[#f5e0e9] text-[#432936]';
     default: return 'bg-[#e7e7e4] text-[#37352f]';
   }
 };
@@ -182,7 +185,7 @@ const Dashboard: React.FC = () => {
   const currentUserName = token ? JSON.parse(atob(token.split('.')[1])).name : '';
 
   const handleUpdateStatus = (projectId: string, status: string) => {
-    socket.emit('update_project_status', { projectId, status, workerName: currentUserName });
+    socket.emit('update_project_status', { projectId, status, workerName: currentUserName, token });
   };
 
   const getUserName = (userIdOrObj: string | User | undefined) => {
@@ -324,7 +327,7 @@ const Dashboard: React.FC = () => {
                 <div>
                   <div className="text-[10px] font-bold text-[var(--notion-text-light)] uppercase tracking-widest mb-2">Statut</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {['Nouveau', 'En cours', 'En révision', 'Terminé'].map(s => (
+                    {['Nouveau', 'En cours', 'Livrée', 'Retour', 'Terminé'].map(s => (
                       <button key={s}
                         onClick={() => setFilterStatus(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
                         className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${filterStatus.includes(s) ? 'bg-[var(--brand-secondary)] text-white border-[var(--brand-secondary)]' : 'border-[var(--notion-border)] text-[var(--notion-text-light)] hover:border-[var(--brand-secondary)]'}`}
@@ -392,7 +395,7 @@ const Dashboard: React.FC = () => {
             )}
           </div>
           
-          {token && JSON.parse(atob(token.split('.')[1])).role === 'chef de produit' && (
+          {(userRole === 'chef de produit' || userRole === 'chef de projet') && (
             <button 
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-1 bg-[var(--brand-secondary)] hover:bg-[var(--brand-primary)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95" style={{ boxShadow: 'var(--shadow-btn)' }}
@@ -483,7 +486,8 @@ const statusPill = (status: string) => {
   switch (status) {
     case 'Terminé':    return 'bg-emerald-100 text-emerald-700';
     case 'En cours':   return 'bg-[var(--surface-high)] text-[var(--brand-secondary)]';
-    case 'En révision':return 'bg-amber-100 text-amber-700';
+    case 'Livrée':     return 'bg-purple-100 text-purple-700';
+    case 'Retour':     return 'bg-amber-100 text-amber-700';
     default:           return 'bg-[var(--surface-low)] text-[var(--notion-text-light)]';
   }
 };
@@ -505,6 +509,7 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
   t: (key: string) => string
 }) => {
   const fields = formFields && formFields.length > 0 ? formFields : [];
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   if (projects.length === 0) {
     return (
@@ -516,13 +521,15 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
   }
 
   return (
-    <div className="overflow-x-auto -mx-4 px-4 md:-mx-12 md:px-12">
+    <div className="-mx-4 px-4 md:-mx-12 md:px-12">
+      <TopScrollbar targetRef={scrollRef} />
       <div
-        className="min-w-[900px] bg-[var(--notion-sidebar)] rounded-xl border border-[var(--notion-border)] overflow-hidden"
+        className="bg-[var(--notion-sidebar)] rounded-xl border border-[var(--notion-border)] overflow-hidden"
         style={{ boxShadow: 'var(--shadow-card)' }}
       >
-        <table className="w-full text-left border-collapse">
-          <thead>
+        <div ref={scrollRef} className="overflow-x-hidden">
+        <table className="w-full text-left border-collapse min-w-[900px]">
+          <thead className="sticky top-0 z-10">
             <tr className="bg-[var(--surface-low)] text-[var(--notion-text-light)] text-[11px] font-semibold uppercase tracking-wide border-b border-[var(--notion-border)]">
               <th className="px-4 py-3 border-r border-[var(--notion-border)] w-[28%]">{t('project.name')}</th>
               {fields.map(f => (
@@ -608,17 +615,16 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
                   );
                 })}
                 <td className="px-4 py-3">
-                  {userRole === 'worker' ? (
-                    <select
-                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold outline-none border-none cursor-pointer ${statusPill(p.status)}`}
-                      value={p.status}
-                      onChange={(e) => onUpdateStatus(p._id, e.target.value)}
+                  {userRole === 'worker' && p.status === 'Nouveau' && !p.workerStatusChanged ? (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateStatus(p._id, 'En cours')}
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all hover:opacity-80 ${statusPill(p.status)}`}
+                      title="Démarrer la tâche (une seule fois)"
                     >
-                      <option value="Nouveau">Nouveau</option>
-                      <option value="En cours">En cours</option>
-                      <option value="En révision">En révision</option>
-                      <option value="Terminé">Terminé</option>
-                    </select>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      {p.status} → En cours
+                    </button>
                   ) : (
                     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold ${statusPill(p.status)}`}>
                       <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -630,6 +636,7 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -643,12 +650,18 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
   onUpdateStatus: (id: string, status: string) => void,
   onRateProject: (projectId: string, rating: number) => void,
 }) => {
-  const columns = ['Nouveau', 'En cours', 'En révision', 'Terminé'];
+  const columns = ['Nouveau', 'En cours', 'Livrée', 'Retour', 'Terminé'];
   const showAssignee = userRole === 'chef de produit' || userRole === 'chef de projet';
   const canRate = userRole === 'chef de produit' || userRole === 'chef de projet' || userRole === 'superadmin';
+
+  const canDragProject = (p: Project) => {
+    if (userRole !== 'worker') return true;
+    return p.status === 'Nouveau' && !p.workerStatusChanged;
+  };
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
   const [starHover, setStarHover] = useState<{ id: string; star: number } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const isOverdue = (p: Project) => {
     if (p.status === 'Terminé') return false;
@@ -670,8 +683,10 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
     e.preventDefault();
     if (draggedId) {
       const project = projects.find(p => p._id === draggedId);
-      if (project && project.status !== col) {
-        onUpdateStatus(draggedId, col);
+      if (project && project.status !== col && canDragProject(project)) {
+        if (userRole !== 'worker' || col === 'En cours') {
+          onUpdateStatus(draggedId, col);
+        }
       }
     }
     setDraggedId(null);
@@ -680,15 +695,18 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
 
   const colAccentClass = (col: string) => {
     switch (col) {
-      case 'Terminé':    return 'bg-emerald-500';
-      case 'En cours':   return 'bg-[var(--brand-secondary)]';
-      case 'En révision':return 'bg-amber-400';
-      default:           return 'bg-slate-300';
+      case 'Terminé':  return 'bg-emerald-500';
+      case 'En cours': return 'bg-[var(--brand-secondary)]';
+      case 'Livrée':   return 'bg-purple-500';
+      case 'Retour':   return 'bg-amber-400';
+      default:         return 'bg-slate-300';
     }
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-8 -mx-4 px-4 md:-mx-12 md:px-12 scrollbar-hide">
+    <div className="-mx-4 px-4 md:-mx-12 md:px-12">
+    <TopScrollbar targetRef={scrollRef} />
+    <div ref={scrollRef} className="flex gap-4 overflow-x-hidden pb-8">
       {columns.map(col => {
         const pCol = projects.filter(p => (p.status || 'Nouveau') === col);
         const isOver = dragOverCol === col && draggedId !== null;
@@ -720,14 +738,14 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
                 return (
                   <div
                     key={p._id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, p._id)}
+                    draggable={canDragProject(p)}
+                    onDragStart={(e) => canDragProject(p) && handleDragStart(e, p._id)}
                     onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
                     className={`rounded-xl p-4 transition-all duration-150 select-none border group
                       ${overdue
                         ? 'bg-rose-50 border-rose-200'
                         : 'bg-[var(--notion-sidebar)] border-[var(--notion-border)]'}
-                      ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : 'cursor-grab active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)]'}`}
+                      ${isDragging ? 'opacity-40 scale-[0.97] shadow-none' : canDragProject(p) ? 'cursor-grab active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)]' : 'cursor-default'}`}
                     style={!isDragging && !overdue ? { boxShadow: 'var(--shadow-card)' } : undefined}
                   >
                     {/* Header row: priority + urgent/overdue badges */}
@@ -836,6 +854,7 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
           </div>
         );
       })}
+    </div>
     </div>
   );
 };

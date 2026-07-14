@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { Project } from '../../types';
 import { FileText, AlertCircle, User as UserIcon, Tag, Box, Calendar } from 'lucide-react';
+import TopScrollbar from '../TopScrollbar';
 
 interface ReportingViewProps {
   projects: Project[];
@@ -19,7 +20,8 @@ const getStatusClasses = (status: string) => {
   switch (status) {
     case 'Terminé':    return 'bg-emerald-100 text-emerald-700';
     case 'En cours':   return 'bg-(--surface-high) text-(--brand-secondary)';
-    case 'En révision':return 'bg-amber-100 text-amber-700';
+    case 'Livrée':     return 'bg-purple-100 text-purple-700';
+    case 'Retour':     return 'bg-amber-100 text-amber-700';
     case 'Nouveau':    return 'bg-slate-100 text-slate-600';
     default:           return 'bg-slate-100 text-slate-600';
   }
@@ -38,13 +40,16 @@ const ReportingView: React.FC<ReportingViewProps> = ({ projects }) => {
     return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
   };
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="flex flex-col bg-(--notion-bg) animate-in fade-in duration-500 select-none p-4">
+      <TopScrollbar targetRef={scrollRef} />
       <div
         className="bg-(--notion-sidebar) rounded-xl border border-(--notion-border) overflow-hidden"
         style={{ boxShadow: 'var(--shadow-card)' }}
       >
-        <div className="overflow-x-auto overflow-y-auto scrollbar-thin max-h-[calc(100vh-220px)]">
+        <div ref={scrollRef} className="overflow-x-hidden">
         <table className="w-full border-collapse border-spacing-0 min-w-[2000px]">
           <thead className="sticky top-0 z-20 bg-(--surface-low) border-b border-(--notion-border)">
             <tr>

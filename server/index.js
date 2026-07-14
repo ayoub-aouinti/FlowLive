@@ -591,15 +591,33 @@ const createNotification = async (userId, title, message, link = null) => {
 };
 
 // ── SOCKET.IO ─────────────────────────────────────────────────────────────────
+const verifySocketToken = (token) => {
+  if (!token) return null;
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
+  } catch {
+    return null;
+  }
+};
+
+const CAN_CREATE_PROJECT_ROLES = ['chef de produit', 'chef de projet', 'superadmin'];
+
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
   socket.on('new_project', async (data) => {
     try {
+      const authUser = verifySocketToken(data.token);
+      if (!authUser || !CAN_CREATE_PROJECT_ROLES.includes(authUser.role)) {
+        socket.emit('error', { message: 'Access denied' });
+        return;
+      }
+      const { token, ...projectData } = data;
       const newProject = await new Project({
         _id: Date.now().toString(),
-        ...data,
-        status: data.status || 'Nouveau',
+        ...projectData,
+        status: projectData.status || 'Nouveau',
+        workerStatusChanged: false,
         createdAt: new Date()
       }).save();
       io.emit('project_added', newProject.toObject());
@@ -614,10 +632,28 @@ io.on('connection', (socket) => {
 
   socket.on('update_project_status', async (data) => {
     try {
+      const authUser = verifySocketToken(data.token);
+      if (!authUser) {
+        socket.emit('error', { message: 'Access denied' });
+        return;
+      }
       const project = await Project.findById(data.projectId).lean();
       if (!project) return;
       const oldStatus = project.status;
-      const updated = await Project.findByIdAndUpdate(data.projectId, { $set: { status: data.status } }, { new: true }).lean();
+
+      if (authUser.role === 'worker') {
+        const alreadyUsed = !!project.workerStatusChanged;
+        const isAllowedTransition = oldStatus === 'Nouveau' && data.status === 'En cours';
+        if (alreadyUsed || !isAllowedTransition) {
+          socket.emit('error', { message: 'Vous ne pouvez changer le statut que de "Nouveau" à "En cours", une seule fois.' });
+          return;
+        }
+      }
+
+      const update = { status: data.status };
+      if (authUser.role === 'worker') update.workerStatusChanged = true;
+
+      const updated = await Project.findByIdAndUpdate(data.projectId, { $set: update }, { new: true }).lean();
       io.emit('project_updated', updated);
 
       const msg = `${data.workerName || 'Un membre'} a déplacé "${updated.name}" : ${oldStatus} → ${updated.status}`;

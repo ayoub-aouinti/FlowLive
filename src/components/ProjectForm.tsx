@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../services/socket';
-import { X, AlertCircle, ChevronDown, Paperclip, Clock } from 'lucide-react';
+import { X, AlertCircle, ChevronDown, Paperclip, Clock, Bold, Italic, Underline, Strikethrough, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Palette, Highlighter, Quote } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import type { User } from '../types';
@@ -31,6 +31,138 @@ const DEFAULT_FORM_FIELDS: FormField[] = [
 interface ProjectFormProps {
   onClose?: () => void;
 }
+
+const isDescriptionField = (field: FormField): boolean =>
+  field.type === 'text' && (field.id === 'f_description' || field.label.trim().toLowerCase() === 'description');
+
+const RichTextField: React.FC<{ field: FormField; value: string; onChange: (v: string) => void }> = ({ field, value, onChange }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+  const savedRange = useRef<Range | null>(null);
+
+  useEffect(() => {
+    if (!initialized.current && ref.current) {
+      ref.current.innerHTML = value || '';
+      initialized.current = true;
+    }
+  }, [value]);
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && ref.current?.contains(sel.anchorNode)) {
+      savedRange.current = sel.getRangeAt(0);
+    }
+  };
+
+  const restoreSelection = () => {
+    const sel = window.getSelection();
+    if (sel && savedRange.current) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange.current);
+    }
+  };
+
+  const exec = (command: string, arg?: string) => {
+    ref.current?.focus();
+    restoreSelection();
+    document.execCommand(command, false, arg);
+    saveSelection();
+    if (ref.current) onChange(ref.current.innerHTML);
+  };
+
+  const toolbarBtn = "p-1.5 rounded-lg hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-all active:scale-90";
+  const toolbarSelect = "text-xs font-semibold bg-transparent outline-none px-1.5 py-1 rounded-lg hover:bg-[var(--notion-hover)] text-[var(--notion-text-light)] hover:text-[var(--notion-text)] transition-all cursor-pointer border-none";
+  const divider = <div className="w-px h-4 bg-[var(--notion-border)] mx-1" />;
+
+  return (
+    <div className="border border-[var(--notion-border)] rounded-xl overflow-hidden focus-within:border-[var(--brand-accent)]/40 transition-colors">
+      <div className="flex items-center flex-wrap gap-0.5 px-2 py-1.5 border-b border-[var(--notion-border)] bg-[var(--notion-hover)]/30">
+        <select
+          defaultValue=""
+          onMouseDown={saveSelection}
+          onChange={e => { exec('formatBlock', e.target.value); e.target.value = ''; }}
+          className={toolbarSelect}
+          title="Style de titre"
+        >
+          <option value="" disabled>Style</option>
+          <option value="<p>">Normal</option>
+          <option value="<h1>">Titre 1</option>
+          <option value="<h2>">Titre 2</option>
+          <option value="<h3>">Titre 3</option>
+          <option value="<blockquote>">Citation</option>
+        </select>
+        {divider}
+        <select
+          defaultValue=""
+          onMouseDown={saveSelection}
+          onChange={e => { exec('fontName', e.target.value); e.target.value = ''; }}
+          className={toolbarSelect}
+          title="Police"
+        >
+          <option value="" disabled>Police</option>
+          <option value="Inter, sans-serif">Défaut</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="'Times New Roman', serif">Times New Roman</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="'Courier New', monospace">Courier New</option>
+          <option value="'Comic Sans MS', cursive">Comic Sans</option>
+        </select>
+        <select
+          defaultValue=""
+          onMouseDown={saveSelection}
+          onChange={e => { exec('fontSize', e.target.value); e.target.value = ''; }}
+          className={toolbarSelect}
+          title="Taille"
+        >
+          <option value="" disabled>Taille</option>
+          <option value="1">Petite</option>
+          <option value="3">Normale</option>
+          <option value="5">Grande</option>
+          <option value="7">Très grande</option>
+        </select>
+        {divider}
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('bold')} className={toolbarBtn} title="Gras"><Bold size={14} /></button>
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('italic')} className={toolbarBtn} title="Italique"><Italic size={14} /></button>
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('underline')} className={toolbarBtn} title="Souligné"><Underline size={14} /></button>
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('strikeThrough')} className={toolbarBtn} title="Barré"><Strikethrough size={14} /></button>
+        {divider}
+        <label className={`${toolbarBtn} relative`} title="Couleur du texte" onMouseDown={saveSelection}>
+          <Palette size={14} />
+          <input
+            type="color"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={e => exec('foreColor', e.target.value)}
+          />
+        </label>
+        <label className={`${toolbarBtn} relative`} title="Surlignage" onMouseDown={saveSelection}>
+          <Highlighter size={14} />
+          <input
+            type="color"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={e => exec('hiliteColor', e.target.value)}
+          />
+        </label>
+        {divider}
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('justifyLeft')} className={toolbarBtn} title="Aligner à gauche"><AlignLeft size={14} /></button>
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('justifyCenter')} className={toolbarBtn} title="Centrer"><AlignCenter size={14} /></button>
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('justifyRight')} className={toolbarBtn} title="Aligner à droite"><AlignRight size={14} /></button>
+        {divider}
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('insertUnorderedList')} className={toolbarBtn} title="Liste à puces"><List size={14} /></button>
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('insertOrderedList')} className={toolbarBtn} title="Liste numérotée"><ListOrdered size={14} /></button>
+        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => exec('formatBlock', '<blockquote>')} className={toolbarBtn} title="Citation"><Quote size={14} /></button>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        onInput={() => ref.current && onChange(ref.current.innerHTML)}
+        onMouseUp={saveSelection}
+        onKeyUp={saveSelection}
+        data-placeholder={field.label}
+        className="min-h-[220px] max-h-[480px] overflow-y-auto px-3.5 py-3 text-sm leading-relaxed text-[var(--notion-text)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-2xl [&_h1]:font-black [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-bold [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--brand-accent)] [&_blockquote]:pl-3 [&_blockquote]:opacity-70 [&_blockquote]:italic empty:before:content-[attr(data-placeholder)] empty:before:text-[var(--notion-text-light)] empty:before:opacity-50"
+      />
+    </div>
+  );
+};
 
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
 
@@ -103,6 +235,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
     payload['_customFields'] = Object.fromEntries(
       fields.map(f => [f.id, getFieldValue(f)])
     );
+
+    payload['token'] = token;
 
     socket.emit('new_project', payload);
     setProjectName('');
@@ -303,16 +437,31 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
 
         <div className="space-y-2">
           {fields.map(field => (
-            <div key={field.id} className="grid grid-cols-[180px_1fr] items-center py-2 group/row hover:bg-[var(--notion-hover)]/30 rounded-xl px-2 -mx-2 transition-colors">
-              <div className="flex items-center gap-2.5 text-[var(--notion-text-light)] text-sm font-bold opacity-60 group-hover/row:opacity-100 transition-all">
-                <AlertCircle size={14} />
-                <span>{field.label}</span>
-                {field.required && <span className="text-[var(--brand-accent)] text-xs">*</span>}
+            isDescriptionField(field) ? (
+              <div key={field.id} className="py-3 space-y-2">
+                <div className="flex items-center gap-2.5 text-[var(--notion-text-light)] text-sm font-bold opacity-60">
+                  <AlertCircle size={14} />
+                  <span>{field.label}</span>
+                  {field.required && <span className="text-[var(--brand-accent)] text-xs">*</span>}
+                </div>
+                <RichTextField
+                  field={field}
+                  value={(getFieldValue(field) as string)}
+                  onChange={v => setFieldValue(field.id, v)}
+                />
               </div>
-              <div className="flex-1">
-                {renderField(field)}
+            ) : (
+              <div key={field.id} className="grid grid-cols-[180px_1fr] items-center py-2 group/row hover:bg-[var(--notion-hover)]/30 rounded-xl px-2 -mx-2 transition-colors">
+                <div className="flex items-center gap-2.5 text-[var(--notion-text-light)] text-sm font-bold opacity-60 group-hover/row:opacity-100 transition-all">
+                  <AlertCircle size={14} />
+                  <span>{field.label}</span>
+                  {field.required && <span className="text-[var(--brand-accent)] text-xs">*</span>}
+                </div>
+                <div className="flex-1">
+                  {renderField(field)}
+                </div>
               </div>
-            </div>
+            )
           ))}
         </div>
 
@@ -321,7 +470,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
             type="submit"
             className="w-full bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white font-black py-4 px-8 rounded-2xl transition-all shadow-[var(--shadow-btn)] active:scale-95 uppercase tracking-widest text-sm flex items-center justify-center gap-3"
           >
-            Créer la page du projet
+            Créer la tâche
             <X className="rotate-45" size={18} />
           </button>
           <p className="text-center text-[var(--notion-text-light)] text-[10px] mt-6 font-bold uppercase tracking-widest opacity-40">
