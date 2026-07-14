@@ -10,50 +10,57 @@ interface CalendarViewProps {
   projects: Project[];
 }
 
-// ── French holidays (Meeus/Jones/Butcher Easter algorithm) ──────────────────
-function getEasterDate(year: number): Date {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const mo = Math.floor((h + l - 7 * m + 114) / 31);
-  const dy = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(year, mo - 1, dy);
-}
+// ── Tunisian holidays ─────────────────────────────────────────────────────────
+// Fixed civil holidays (Gregorian calendar, same date every year).
+const TUNISIA_FIXED_HOLIDAYS: Array<[string, string]> = [
+  ['01-01', "Jour de l'An"],
+  ['01-14', 'Fête de la Révolution et de la Jeunesse'],
+  ['03-20', "Fête de l'Indépendance"],
+  ['04-09', 'Journée des Martyrs'],
+  ['05-01', 'Fête du Travail'],
+  ['07-25', 'Fête de la République'],
+  ['08-13', 'Fête de la Femme'],
+  ['10-15', "Fête de l'Évacuation"],
+];
 
-function toDateKey(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
+// Islamic (Hijri) holidays — the Hijri calendar is lunar, so these dates shift
+// every year and are only confirmed close to the date via official moon sighting.
+// Estimated dates below, to be adjusted once each year's official calendar is published.
+const TUNISIA_ISLAMIC_HOLIDAYS: Record<number, Array<[string, string]>> = {
+  2024: [
+    ['04-10', 'Aïd El Fitr'], ['04-11', 'Aïd El Fitr'],
+    ['06-16', 'Aïd El Idha'], ['06-17', 'Aïd El Idha'], ['06-18', 'Aïd El Idha'],
+    ['07-07', 'Ras El Am Hijri'],
+    ['09-15', 'Mouled'],
+  ],
+  2025: [
+    ['03-31', 'Aïd El Fitr'], ['04-01', 'Aïd El Fitr'],
+    ['06-06', 'Aïd El Idha'], ['06-07', 'Aïd El Idha'], ['06-08', 'Aïd El Idha'],
+    ['06-26', 'Ras El Am Hijri'],
+    ['09-04', 'Mouled'],
+  ],
+  2026: [
+    ['03-19', 'Aïd El Fitr'], ['03-20', 'Aïd El Fitr'],
+    ['05-26', 'Aïd El Idha'], ['05-27', 'Aïd El Idha'], ['05-28', 'Aïd El Idha'],
+    ['06-15', 'Ras El Am Hijri'],
+    ['08-24', 'Mouled'],
+  ],
+  2027: [
+    ['03-09', 'Aïd El Fitr'], ['03-10', 'Aïd El Fitr'],
+    ['05-15', 'Aïd El Idha'], ['05-16', 'Aïd El Idha'], ['05-17', 'Aïd El Idha'],
+    ['06-04', 'Ras El Am Hijri'],
+    ['08-13', 'Mouled'],
+  ],
+};
 
-function addDays(date: Date, n: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
-function getFrenchHolidays(year: number): Map<string, string> {
-  const holidays = new Map<string, string>([
-    [`${year}-01-01`, 'Jour de l\'An'],
-    [`${year}-05-01`, 'Fête du Travail'],
-    [`${year}-05-08`, 'Victoire 1945'],
-    [`${year}-07-14`, 'Fête Nationale'],
-    [`${year}-08-15`, 'Assomption'],
-    [`${year}-11-01`, 'Toussaint'],
-    [`${year}-11-11`, 'Armistice'],
-    [`${year}-12-25`, 'Noël'],
-  ]);
-  const easter = getEasterDate(year);
-  holidays.set(toDateKey(addDays(easter, 1)), 'Lundi de Pâques');
-  holidays.set(toDateKey(addDays(easter, 39)), 'Ascension');
-  holidays.set(toDateKey(addDays(easter, 50)), 'Lundi de Pentecôte');
+function getTunisianHolidays(year: number): Map<string, string> {
+  const holidays = new Map<string, string>();
+  TUNISIA_FIXED_HOLIDAYS.forEach(([monthDay, label]) => {
+    holidays.set(`${year}-${monthDay}`, label);
+  });
+  (TUNISIA_ISLAMIC_HOLIDAYS[year] || []).forEach(([monthDay, label]) => {
+    holidays.set(`${year}-${monthDay}`, label);
+  });
   return holidays;
 }
 
@@ -101,7 +108,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ projects }) => {
 
   const year  = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const holidays = getFrenchHolidays(year);
+  const holidays = getTunisianHolidays(year);
 
   const isChef = user?.role === 'chef de projet' || user?.role === 'superadmin';
 
