@@ -60,6 +60,7 @@ const Sidebar: React.FC = () => {
   const DEFAULT_ROLE_PAGES: Record<string, string[]> = {
     'worker':          ['table', 'kanban', 'timeline', 'calendrier'],
     'chef de produit': ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+    'ARC':             ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
   };
 
   const isSidebarPageVisible = (pageId: string): boolean => {

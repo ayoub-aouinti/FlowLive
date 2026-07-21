@@ -4,15 +4,24 @@
     "name": "Département IT",
     "adminId": "admin@flow.com",
     "products": [
-      "Software",
-      "Hardware",
-      "Network",
-      "test"
+      "Esoral",
+      "Ipproton",
+      "Stopagic",
+      "Airycort",
+      "Respyfor",
+      "Enoxa",
+      "Glargen",
+      "Levorgica",
+      "Dmax",
+      "Dexamedis",
+      "Apixadis",
+      "Ator",
+      "Losar",
+      "Colosar"
     ],
     "types": [
-      "Développement",
-      "Maintenance",
-      "Support"
+      "Art works",
+      "Classic"
     ],
     "pageConfigs": {},
     "formFields": [

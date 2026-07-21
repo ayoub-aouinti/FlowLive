@@ -87,6 +87,7 @@ const Dashboard: React.FC = () => {
     workspaceTitle?: string | null;
     workspaceSubtitle?: string | null;
     rolePages?: Record<string, string[]>;
+    statusTransitions?: Record<string, Record<string, string[]>>;
   } | null>(null);
   const { token } = useAuth();
 
@@ -199,6 +200,37 @@ const Dashboard: React.FC = () => {
   const DEFAULT_ROLE_PAGES: Record<string, string[]> = {
     'worker':          ['table', 'kanban', 'timeline', 'calendrier'],
     'chef de produit': ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+    'ARC':             ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+  };
+
+  const DEFAULT_STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
+    'worker': {
+      'Nouveau': ['En cours'],
+      'En cours': ['Livrée'],
+      'Retour': ['Livrée'],
+    },
+    'chef de projet': {
+      'Livrée': ['Retour', 'Terminé'],
+      'Retour': ['Terminé'],
+    },
+    'chef de produit': {
+      'Livrée': ['Retour', 'Terminé'],
+      'Retour': ['Terminé'],
+    },
+    'ARC': {
+      'Livrée': ['Retour', 'Terminé'],
+      'Retour': ['Terminé'],
+    },
+  };
+  const CONFIGURABLE_STATUS_ROLES = ['worker', 'chef de projet', 'chef de produit', 'ARC'];
+
+  const getAllowedNextStatuses = (role: string, fromStatus: string, statusTransitions?: Record<string, Record<string, string[]>>): string[] => {
+    if (role === 'superadmin') return ['Nouveau', 'En cours', 'Livrée', 'Retour', 'Terminé'].filter(s => s !== fromStatus);
+    if (!CONFIGURABLE_STATUS_ROLES.includes(role)) return [];
+    const roleTransitions = statusTransitions?.[role] && Object.keys(statusTransitions[role]).length > 0
+      ? statusTransitions[role]
+      : DEFAULT_STATUS_TRANSITIONS[role];
+    return roleTransitions[fromStatus] || [];
   };
 
   const isPageActive = (pageId: string) => {
@@ -395,7 +427,7 @@ const Dashboard: React.FC = () => {
             )}
           </div>
           
-          {(userRole === 'chef de produit' || userRole === 'chef de projet') && (
+          {(userRole === 'chef de produit' || userRole === 'chef de projet' || userRole === 'ARC') && (
             <button 
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-1 bg-[var(--brand-secondary)] hover:bg-[var(--brand-primary)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95" style={{ boxShadow: 'var(--shadow-btn)' }}
@@ -457,8 +489,8 @@ const Dashboard: React.FC = () => {
       )}
 
       <div className="min-h-[500px]">
-        {view === 'table' && <TableView projects={displayedProjects} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} formFields={deptConfig?.formFields || undefined} theme={theme} t={t} />}
-        {view === 'kanban' && <KanbanView projects={displayedProjects} theme={theme} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} onRateProject={rateProject} />}
+        {view === 'table' && <TableView projects={displayedProjects} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} formFields={deptConfig?.formFields || undefined} theme={theme} t={t} getAllowedNextStatuses={getAllowedNextStatuses} statusTransitions={deptConfig?.statusTransitions} />}
+        {view === 'kanban' && <KanbanView projects={displayedProjects} theme={theme} getUserName={getUserName} userRole={userRole} onUpdateStatus={handleUpdateStatus} onRateProject={rateProject} getAllowedNextStatuses={getAllowedNextStatuses} statusTransitions={deptConfig?.statusTransitions} />}
         {view === 'timeline' && <TimelineView projects={displayedProjects} getUserName={getUserName} theme={theme} />}
         {view === 'calendrier' && <CalendarView projects={displayedProjects} />}
         {view === 'reporting' && <ReportingView projects={displayedProjects} />}
@@ -499,14 +531,16 @@ const priorityPill = (priority: string) => {
   }
 };
 
-const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields, t }: {
+const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields, t, getAllowedNextStatuses, statusTransitions }: {
   projects: Project[],
   getUserName: (u: string | User | undefined) => string,
   userRole: string,
   onUpdateStatus: (id: string, s: string) => void,
   formFields?: FormField[],
   theme: string,
-  t: (key: string) => string
+  t: (key: string) => string,
+  getAllowedNextStatuses: (role: string, fromStatus: string, statusTransitions?: Record<string, Record<string, string[]>>) => string[],
+  statusTransitions?: Record<string, Record<string, string[]>>
 }) => {
   const fields = formFields && formFields.length > 0 ? formFields : [];
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -615,15 +649,18 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
                   );
                 })}
                 <td className="px-4 py-3">
-                  {userRole === 'worker' && p.status === 'Nouveau' && !p.workerStatusChanged ? (
+                  {(() => {
+                    const nextStatuses = userRole === 'worker' ? getAllowedNextStatuses(userRole, p.status, statusTransitions) : [];
+                    return nextStatuses.length === 1;
+                  })() ? (
                     <button
                       type="button"
-                      onClick={() => onUpdateStatus(p._id, 'En cours')}
+                      onClick={() => onUpdateStatus(p._id, getAllowedNextStatuses(userRole, p.status, statusTransitions)[0])}
                       className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all hover:opacity-80 ${statusPill(p.status)}`}
-                      title="Démarrer la tâche (une seule fois)"
+                      title="Faire avancer la tâche"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                      {p.status} → En cours
+                      {p.status} → {getAllowedNextStatuses(userRole, p.status, statusTransitions)[0]}
                     </button>
                   ) : (
                     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold ${statusPill(p.status)}`}>
@@ -642,22 +679,22 @@ const TableView = ({ projects, getUserName, userRole, onUpdateStatus, formFields
   );
 };
 
-const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, onRateProject }: {
+const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, onRateProject, getAllowedNextStatuses, statusTransitions }: {
   projects: Project[],
   theme: string,
   getUserName: (u: string | User | undefined) => string,
   userRole: string,
   onUpdateStatus: (id: string, status: string) => void,
   onRateProject: (projectId: string, rating: number) => void,
+  getAllowedNextStatuses: (role: string, fromStatus: string, statusTransitions?: Record<string, Record<string, string[]>>) => string[],
+  statusTransitions?: Record<string, Record<string, string[]>>,
 }) => {
   const columns = ['Nouveau', 'En cours', 'Livrée', 'Retour', 'Terminé'];
-  const showAssignee = userRole === 'chef de produit' || userRole === 'chef de projet';
-  const canRate = userRole === 'chef de produit' || userRole === 'chef de projet' || userRole === 'superadmin';
+  const showAssignee = userRole === 'chef de produit' || userRole === 'chef de projet' || userRole === 'ARC';
+  const canRate = userRole === 'chef de produit' || userRole === 'chef de projet' || userRole === 'ARC' || userRole === 'superadmin';
 
-  const canDragProject = (p: Project) => {
-    if (userRole !== 'worker') return true;
-    return p.status === 'Nouveau' && !p.workerStatusChanged;
-  };
+  const allowedNextForProject = (p: Project) => getAllowedNextStatuses(userRole, p.status, statusTransitions);
+  const canDragProject = (p: Project) => allowedNextForProject(p).length > 0;
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
   const [starHover, setStarHover] = useState<{ id: string; star: number } | null>(null);
@@ -683,10 +720,8 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
     e.preventDefault();
     if (draggedId) {
       const project = projects.find(p => p._id === draggedId);
-      if (project && project.status !== col && canDragProject(project)) {
-        if (userRole !== 'worker' || col === 'En cours') {
-          onUpdateStatus(draggedId, col);
-        }
+      if (project && project.status !== col && allowedNextForProject(project).includes(col)) {
+        onUpdateStatus(draggedId, col);
       }
     }
     setDraggedId(null);
@@ -810,8 +845,8 @@ const KanbanView = ({ projects, theme, getUserName, userRole, onUpdateStatus, on
                       </div>
                     )}
 
-                    {/* Star rating — Terminé column only */}
-                    {col === 'Terminé' && (
+                    {/* Star rating — Terminé column only, hidden from workers */}
+                    {col === 'Terminé' && userRole !== 'worker' && (
                       <div className="flex items-center gap-0.5 pt-2 mt-2 border-t border-[var(--notion-border)]">
                         <span className="text-[9px] text-[var(--notion-text-light)] mr-1 font-medium">Appréciation</span>
                         <div className="flex items-center gap-0.5 ml-auto">

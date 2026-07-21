@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, Users, LayoutList, Trash2, Building2, FileText, GripVertical, ChevronDown, Edit2, Check, X } from 'lucide-react';
+import { Plus, Users, LayoutList, Trash2, Building2, FileText, GripVertical, ChevronDown, Edit2, Check, X, Columns } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types';
 
@@ -37,11 +37,42 @@ const ALL_PAGES = [
 const CONFIGURABLE_ROLES = [
   { id: 'worker',          label: 'Worker' },
   { id: 'chef de produit', label: 'Chef de produit' },
+  { id: 'ARC',             label: 'ARC' },
 ];
 
 const DEFAULT_ROLE_PAGES: Record<string, string[]> = {
   'worker':          ['table', 'kanban', 'timeline', 'calendrier'],
   'chef de produit': ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+  'ARC':             ['table', 'kanban', 'timeline', 'calendrier', 'reporting', 'urgences', 'stats'],
+};
+
+const STATUSES = ['Nouveau', 'En cours', 'Livrée', 'Retour', 'Terminé'];
+
+const TRANSITION_ROLES = [
+  { id: 'worker',          label: 'Worker' },
+  { id: 'chef de projet',  label: 'Chef de projet' },
+  { id: 'chef de produit', label: 'Chef de produit' },
+  { id: 'ARC',             label: 'ARC' },
+];
+
+const DEFAULT_STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
+  'worker': {
+    'Nouveau': ['En cours'],
+    'En cours': ['Livrée'],
+    'Retour': ['Livrée'],
+  },
+  'chef de projet': {
+    'Livrée': ['Retour', 'Terminé'],
+    'Retour': ['Terminé'],
+  },
+  'chef de produit': {
+    'Livrée': ['Retour', 'Terminé'],
+    'Retour': ['Terminé'],
+  },
+  'ARC': {
+    'Livrée': ['Retour', 'Terminé'],
+    'Retour': ['Terminé'],
+  },
 };
 
 const DEFAULT_FORM_FIELDS: FormField[] = [
@@ -67,7 +98,9 @@ export function DepartmentSettings() {
     workspaceTitle?: string;
     workspaceSubtitle?: string;
     rolePages?: Record<string, string[]>;
-  }>({ products: [], types: [], activePages: [], pageConfigs: {}, formFields: [], rolePages: {} });
+    statusTransitions?: Record<string, Record<string, string[]>>;
+  }>({ products: [], types: [], activePages: [], pageConfigs: {}, formFields: [], rolePages: {}, statusTransitions: {} });
+  const [transitionRole, setTransitionRole] = useState('worker');
   const [departmentMembers, setDepartmentMembers] = useState<(User & { status: string; isInvitation?: boolean })[]>([]);
   const [newItem, setNewItem] = useState({ type: 'product', value: '' });
   const [bulkEmails, setBulkEmails] = useState('');
@@ -142,6 +175,19 @@ export function DepartmentSettings() {
       : [...current, pageId];
     const newRolePages = { ...(config.rolePages || {}), [role]: next };
     handleUpdateConfig({ ...config, rolePages: newRolePages });
+  };
+
+  const handleToggleTransition = (role: string, from: string, to: string) => {
+    const currentForRole = config.statusTransitions?.[role] && Object.keys(config.statusTransitions[role]).length > 0
+      ? config.statusTransitions[role]
+      : DEFAULT_STATUS_TRANSITIONS[role];
+    const currentTargets = currentForRole[from] || [];
+    const nextTargets = currentTargets.includes(to)
+      ? currentTargets.filter(s => s !== to)
+      : [...currentTargets, to];
+    const newForRole = { ...currentForRole, [from]: nextTargets };
+    const newTransitions = { ...(config.statusTransitions || {}), [role]: newForRole };
+    handleUpdateConfig({ ...config, statusTransitions: newTransitions });
   };
 
   const handleSaveEdit = () => {
@@ -430,6 +476,78 @@ export function DepartmentSettings() {
               <p className="text-xs text-[var(--notion-text-light)] mb-4 font-medium italic">Les colonnes sont auto-générées depuis votre Générateur de Formulaire ci-dessous.</p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── Règles de mouvement du pipeline ──────────────────────────── */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <Columns className="w-5 h-5 text-[var(--brand-accent)]" />
+          <h3 className="text-lg font-bold text-[var(--notion-text)]">Règles de mouvement du pipeline</h3>
+        </div>
+        <div className="bg-[var(--notion-sidebar)] p-5 border border-[var(--notion-border)] rounded-2xl mb-8">
+          <p className="text-xs text-[var(--notion-text-light)] mb-4">
+            Définissez, pour chaque rôle, les mouvements de carte autorisés d'un statut vers un autre.
+          </p>
+
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {TRANSITION_ROLES.map(role => (
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => setTransitionRole(role.id)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all border ${
+                  transitionRole === role.id
+                    ? 'bg-[var(--brand-accent)] text-white border-[var(--brand-accent)]'
+                    : 'bg-[var(--notion-bg)] text-[var(--notion-text-light)] border-[var(--notion-border)] hover:border-[var(--brand-accent)]'
+                }`}
+              >
+                {role.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--notion-border)]">
+                  <th className="py-2 pr-4 font-bold text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest w-32">De \ Vers</th>
+                  {STATUSES.map(s => (
+                    <th key={s} className="py-2 px-3 text-center font-bold text-[10px] text-[var(--notion-text-light)] uppercase tracking-widest">{s}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--notion-border)]">
+                {STATUSES.map(from => {
+                  const current = config.statusTransitions?.[transitionRole] && Object.keys(config.statusTransitions[transitionRole]).length > 0
+                    ? config.statusTransitions[transitionRole]
+                    : DEFAULT_STATUS_TRANSITIONS[transitionRole];
+                  const targets = current[from] || [];
+                  return (
+                    <tr key={from} className="hover:bg-[var(--notion-hover)] transition-colors">
+                      <td className="py-3 pr-4 font-bold text-[var(--notion-text)] text-xs">{from}</td>
+                      {STATUSES.map(to => (
+                        <td key={to} className="py-3 px-3 text-center">
+                          {to === from ? (
+                            <span className="text-[var(--notion-text-light)] opacity-30">—</span>
+                          ) : (
+                            <label className="inline-flex items-center justify-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={targets.includes(to)}
+                                onChange={() => handleToggleTransition(transitionRole, from, to)}
+                                className="w-4 h-4 rounded border-[var(--notion-border)] text-[var(--brand-accent)] cursor-pointer focus:ring-0"
+                              />
+                            </label>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -725,6 +843,7 @@ export function DepartmentSettings() {
                       >
                         <option value="worker">Worker</option>
                         <option value="chef de produit">Chef de produit</option>
+                        <option value="ARC">ARC</option>
                         <option value="chef de projet">Chef de projet</option>
                       </select>
                       <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40" />
@@ -795,6 +914,7 @@ export function DepartmentSettings() {
                   >
                     <option value="worker">Worker</option>
                     <option value="chef de produit">Chef de produit</option>
+                    <option value="ARC">ARC</option>
                   </select>
                   <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--notion-text-light)]" />
                 </div>

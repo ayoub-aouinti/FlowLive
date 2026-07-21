@@ -16,37 +16,39 @@ const Notification = require('./models/Notification');
 const Invitation = require('./models/Invitation');
 const Leave = require('./models/Leave');
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: process.env.FRONTEND_URL || '*', methods: ['GET', 'POST'] }
-});
-
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://department-manage.netlify.app',
   'http://localhost:5173'
 ].filter(Boolean);
 
+const isOriginAllowed = (origin, host) => {
+  if (!origin) return true;
+  const originHost = origin.replace(/^https?:\/\//, '');
+  return (
+    allowedOrigins.includes(origin) ||
+    allowedOrigins.includes('*') ||
+    originHost === host ||
+    /^https?:\/\/localhost:\d+$/.test(origin)
+  );
+};
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin, null));
+    },
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
 const corsOptionsDelegate = (req, callback) => {
   const origin = req.header('Origin');
   const host = req.header('Host');
-  let isAllowed = false;
-
-  if (!origin) {
-    isAllowed = true;
-  } else {
-    const originHost = origin.replace(/^https?:\/\//, '');
-    if (
-      allowedOrigins.includes(origin) ||
-      allowedOrigins.includes('*') ||
-      originHost === host
-    ) {
-      isAllowed = true;
-    }
-  }
-
-  callback(null, { origin: isAllowed, credentials: true });
+  callback(null, { origin: isOriginAllowed(origin, host), credentials: true });
 };
 
 app.use(cors(corsOptionsDelegate));
@@ -56,6 +58,28 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Add id = _id for frontend compatibility (lean() drops virtuals)
 const withId = (doc) => (doc ? { ...doc, id: doc._id } : null);
 const withIds = (arr) => (arr || []).map(withId);
+
+// ── STATUS TRANSITION RULES ─────────────────────────────────────────────────
+const CONFIGURABLE_STATUS_ROLES = ['worker', 'chef de projet', 'chef de produit', 'ARC'];
+const DEFAULT_STATUS_TRANSITIONS = {
+  'worker': {
+    'Nouveau': ['En cours'],
+    'En cours': ['Livrée'],
+    'Retour': ['Livrée']
+  },
+  'chef de projet': {
+    'Livrée': ['Retour', 'Terminé'],
+    'Retour': ['Terminé']
+  },
+  'chef de produit': {
+    'Livrée': ['Retour', 'Terminé'],
+    'Retour': ['Terminé']
+  },
+  'ARC': {
+    'Livrée': ['Retour', 'Terminé'],
+    'Retour': ['Terminé']
+  }
+};
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
@@ -204,7 +228,8 @@ app.get('/api/departments/my-config', authenticateToken, async (req, res) => {
       logoUrl: dept.logoUrl || null,
       workspaceTitle: dept.workspaceTitle || null,
       workspaceSubtitle: dept.workspaceSubtitle || null,
-      rolePages: dept.rolePages || {}
+      rolePages: dept.rolePages || {},
+      statusTransitions: dept.statusTransitions || {}
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -315,6 +340,7 @@ app.put('/api/departments/:id/config', authenticateToken, async (req, res) => {
     if (req.body.workspaceTitle !== undefined) patch.workspaceTitle = req.body.workspaceTitle;
     if (req.body.workspaceSubtitle !== undefined) patch.workspaceSubtitle = req.body.workspaceSubtitle;
     if (req.body.rolePages !== undefined) patch.rolePages = req.body.rolePages;
+    if (req.body.statusTransitions !== undefined) patch.statusTransitions = req.body.statusTransitions;
 
     const updated = await Department.findByIdAndUpdate(req.params.id, { $set: patch }, { new: true }).lean();
     res.json(withId(updated));
@@ -377,7 +403,10 @@ app.delete('/api/notifications/:id', authenticateToken, async (req, res) => {
 // ── USERS ─────────────────────────────────────────────────────────────────────
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
-    const users = await User.find({ departmentId: req.user.departmentId }).lean();
+    let users = await User.find({ departmentId: req.user.departmentId }).lean();
+    if (req.user.role === 'worker') {
+      users = users.filter(u => u.role !== 'worker' || u._id === req.user.id);
+    }
     res.json(users.map(u => ({ name: u.name, role: u.role, _id: u._id, id: u._id, email: u.email })));
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -465,7 +494,7 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
     const { role, id, departmentId } = req.user;
     let filter = {};
     if (role === 'chef de projet') filter.departmentId = departmentId;
-    else if (role === 'chef de produit') filter = { departmentId, initiatorId: id };
+    else if (role === 'chef de produit' || role === 'ARC') filter = { departmentId, initiatorId: id };
     else if (role === 'worker') filter = { departmentId, assignedTo: id };
     else if (role === 'superadmin') {
       if (req.query.departmentId) filter.departmentId = req.query.departmentId;
@@ -483,7 +512,7 @@ app.patch('/api/projects/:id/rating', authenticateToken, async (req, res) => {
   try {
     const { rating } = req.body;
     if (!rating || rating < 1 || rating > 5) return res.status(400).json({ message: 'Note invalide (1–5)' });
-    const canRate = ['chef de produit', 'chef de projet', 'superadmin'].includes(req.user.role);
+    const canRate = ['chef de produit', 'chef de projet', 'ARC', 'superadmin'].includes(req.user.role);
     if (!canRate) return res.status(403).json({ message: 'Access denied' });
     const project = await Project.findOneAndUpdate(
       { _id: req.params.id, departmentId: req.user.departmentId, status: 'Terminé' },
@@ -600,7 +629,7 @@ const verifySocketToken = (token) => {
   }
 };
 
-const CAN_CREATE_PROJECT_ROLES = ['chef de produit', 'chef de projet', 'superadmin'];
+const CAN_CREATE_PROJECT_ROLES = ['chef de produit', 'chef de projet', 'ARC', 'superadmin'];
 
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
@@ -641,17 +670,27 @@ io.on('connection', (socket) => {
       if (!project) return;
       const oldStatus = project.status;
 
-      if (authUser.role === 'worker') {
-        const alreadyUsed = !!project.workerStatusChanged;
-        const isAllowedTransition = oldStatus === 'Nouveau' && data.status === 'En cours';
-        if (alreadyUsed || !isAllowedTransition) {
-          socket.emit('error', { message: 'Vous ne pouvez changer le statut que de "Nouveau" à "En cours", une seule fois.' });
+      if (authUser.role !== 'superadmin') {
+        if (!CONFIGURABLE_STATUS_ROLES.includes(authUser.role)) {
+          socket.emit('error', { message: 'Access denied' });
+          return;
+        }
+        if (authUser.role === 'worker' && project.assignedTo !== authUser.id) {
+          socket.emit('error', { message: 'Mouvement de statut non autorisé.' });
+          return;
+        }
+        const dept = await Department.findById(project.departmentId).lean();
+        const roleTransitions = (dept && dept.statusTransitions && dept.statusTransitions[authUser.role] && Object.keys(dept.statusTransitions[authUser.role]).length > 0)
+          ? dept.statusTransitions[authUser.role]
+          : DEFAULT_STATUS_TRANSITIONS[authUser.role];
+        const allowed = roleTransitions[oldStatus] || [];
+        if (!allowed.includes(data.status)) {
+          socket.emit('error', { message: 'Mouvement de statut non autorisé.' });
           return;
         }
       }
 
       const update = { status: data.status };
-      if (authUser.role === 'worker') update.workerStatusChanged = true;
 
       const updated = await Project.findByIdAndUpdate(data.projectId, { $set: update }, { new: true }).lean();
       io.emit('project_updated', updated);

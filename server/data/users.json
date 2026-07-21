@@ -18,9 +18,27 @@
     "isVerified": true
   },
   {
-    "id": "user_1",
-    "name": "Standard User",
-    "email": "user@flow.com",
+    "id": "user_1784600305047",
+    "name": "Hamdi Naili",
+    "email": "hamdi.naili@flow.com",
+    "password": "password123",
+    "role": "worker",
+    "departmentId": "dept_1",
+    "isVerified": true
+  },
+  {
+    "id": "user_1784600305048",
+    "name": "Thouraya Mekki",
+    "email": "thouraya.mekki@flow.com",
+    "password": "password123",
+    "role": "worker",
+    "departmentId": "dept_1",
+    "isVerified": true
+  },
+  {
+    "id": "user_1784600305049",
+    "name": "Mohamed Krimi",
+    "email": "mohamed.krimi@flow.com",
     "password": "password123",
     "role": "worker",
     "departmentId": "dept_1",
